@@ -1,0 +1,46 @@
+name: Build node binaries
+# Public CI (free unlimited minutes) that builds the Bull4Life node binaries for x86-64 AND arm64.
+# This repo holds ONLY this workflow ? no strategy source. The private engine source is cloned READ-ONLY
+# into the ephemeral runner via a fine-grained token secret, compiled, and discarded. Nothing sensitive
+# is ever committed here or printed to logs.
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    name: build-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86-64
+            out: b4l_node-linux
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+            out: b4l_node-linux-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - name: Clone private engine source (read-only token, never logged)
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ secrets.ENGINE_TOKEN }}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build deps
+        run: pip install nuitka numpy pandas psutil cryptography certifi
+      - name: Build (Nuitka onefile)
+        working-directory: engine
+        run: python compute/build_node.py
+      - name: Locate binary
+        working-directory: engine
+        run: |
+          f=$(ls -1 dist/b4l_node* 2>/dev/null | grep -Ev '\.(zip|dist)$' | head -n1)
+          if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
+          cp "$f" "../${{ matrix.out }}"; chmod +x "../${{ matrix.out }}"
+          echo "size: $(du -h ../${{ matrix.out }} | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: ${{ matrix.out }}
+          retention-days: 14

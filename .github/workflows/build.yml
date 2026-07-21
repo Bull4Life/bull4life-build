@@ -1,8 +1,12 @@
 name: Build node binaries
-# Public CI (free unlimited minutes) that builds the Bull4Life node binaries for x86-64 AND arm64.
-# This repo holds ONLY this workflow ? no strategy source. The private engine source is cloned READ-ONLY
-# into the ephemeral runner via a fine-grained token secret, compiled, and discarded. Nothing sensitive
-# is ever committed here or printed to logs.
+# Public CI (FREE unlimited minutes) that builds the Bull4Life node binaries for Windows x64, Linux x86-64
+# AND Linux arm64 — ALL donor platforms in one run. This is the ONLY place node binaries are built: it keeps
+# the build off Daniel's laptop/wifi AND out of the private engine repo (which BILLS Actions minutes), and it
+# does NOT touch the donor-node fleet's free minutes (they run on the separate public bull4life-donate repo).
+# This repo holds ONLY this workflow — no strategy source. The private engine source is cloned READ-ONLY into
+# the ephemeral runner via a fine-grained token secret, compiled, and discarded. Nothing sensitive is ever
+# committed here or printed to logs. All steps run in bash (Git Bash on the Windows runner) so the matrix
+# shares one set of steps.
 on:
   workflow_dispatch:
 jobs:
@@ -12,6 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - runner: windows-latest     # Windows x64 donors (built here, never on Daniel's laptop)
+            arch: windows-x64
+            out: b4l_node-windows.exe
           - runner: ubuntu-22.04
             arch: x86-64
             out: b4l_node-linux
@@ -20,6 +27,9 @@ jobs:
             out: b4l_node-linux-arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash                    # Git Bash on windows-latest -> one set of steps works on all 3 runners
     steps:
       - name: Clone private engine source (read-only token, never logged)
         run: |

@@ -1,0 +1,49 @@
+name: PEX test node (Windows, cloud)
+
+# A CLOUD Windows PEX node for Cludia's fork-survival gauntlet — joins the live chain, holds, reports
+# height/root/version. Runs on a GitHub Windows runner (free on this public repo), NOT on Master's laptop.
+# Self-contained: downloads the served pex-node bundle; no engine source needed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to hold at the tip (minutes)"
+        required: false
+        default: "30"
+
+jobs:
+  hold:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - name: Set up Python 3.12 (matches the box)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Join the live chain + hold + report
+        shell: bash
+        env:
+          PEX_JOIN_FASTSYNC: "0"
+        run: |
+          set -e
+          MINUTES="${{ github.event.inputs.minutes }}"; MINUTES="${MINUTES:-30}"
+          mkdir pexnode && cd pexnode
+          echo "=== downloading pex-node bundle ==="
+          curl -fsSL https://compute.bull4life.com/download/pex-node.tar.gz | tar xz
+          test -f node/pex_join_out.py || { echo "bundle missing pex_join_out"; exit 1; }
+          echo "=== joining (FASTSYNC=0 full replay) — holding ${MINUTES} min ==="
+          python -m node.pex_join_out --quiet > node.log 2>&1 &
+          NODE_PID=$!
+          for i in $(seq 1 "$MINUTES"); do
+            sleep 60
+            LINE=$(grep -oE "height [0-9]+" node.log | tail -1 || true)
+            echo "[t+${i}m] ${LINE:-(still joining)}"
+          done
+          echo "======================= FINAL REPORT ======================="
+          grep -E "node up \|" node.log | tail -1 || true
+          grep -E "AT THE LIVE TIP|byte-identical|code version mismatch" node.log | tail -3 || true
+          echo "last height: $(grep -oE 'height [0-9]+' node.log | tail -1)"
+          kill "$NODE_PID" 2>/dev/null || true
+          echo "============================================================"

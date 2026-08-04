@@ -1,0 +1,46 @@
+name: PEX mesh fleet (persistent, cloud)
+
+# Persistent GitHub-fleet PEX mesh: keeps ~4 real PEX nodes continuously joined to the live chain (a2fff4f2),
+# each downloading the on-chain-current served bundle and holding to the tip. FREE (public repo). This is the
+# decentralization substrate (Master 2026-08-04 "use the github fleet") for the ownerless update authority +
+# rotating brain-role: a rolling pool of real mesh peers. A cron re-launches before the hold expires so the
+# mesh never fully drains. (Read-only replicas today; the voting-committee/ratification layer is the consensus build.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      nodes:   { description: "how many nodes this launch", required: false, default: "4" }
+      minutes: { description: "hold minutes per node",       required: false, default: "330" }
+  schedule:
+    - cron: "0 */5 * * *"   # every 5h re-launch (hold 330min≈5.5h → continuous overlap, no full drain)
+
+jobs:
+  mesh:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [1, 2, 3, 4]
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Join a2fff4f2 + hold + report
+        shell: bash
+        env: { PEX_JOIN_FASTSYNC: "0", PEX_NODE_NAME: "gh-mesh-${{ matrix.node }}" }
+        run: |
+          set -e
+          MIN="${{ github.event.inputs.minutes }}"; MIN="${MIN:-330}"
+          mkdir pexnode && cd pexnode
+          curl -fsSL https://compute.bull4life.com/download/pex-node.tar.gz | tar xz
+          test -f node/pex_join_out.py || { echo "bundle missing"; exit 1; }
+          python -m node.pex_join_out --quiet > node.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 "$MIN"); do
+            sleep 60
+            [ $((i % 15)) -eq 0 ] && echo "[gh-mesh-${{ matrix.node }} t+${i}m] $(grep -oE 'height [0-9]+' node.log | tail -1 || echo joining)"
+          done
+          echo "=== FINAL gh-mesh-${{ matrix.node }} ==="
+          grep -E "AT THE LIVE TIP|byte-identical|node up \|" node.log | tail -3 || true
+          echo "height: $(grep -oE 'height [0-9]+' node.log | tail -1)"
+          kill "$PID" 2>/dev/null || true

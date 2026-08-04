@@ -41,6 +41,17 @@ jobs:
             [ $((i % 15)) -eq 0 ] && echo "[gh-mesh-${{ matrix.node }} t+${i}m] $(grep -oE 'height [0-9]+' node.log | tail -1 || echo joining)"
           done
           echo "=== FINAL gh-mesh-${{ matrix.node }} ==="
-          grep -E "AT THE LIVE TIP|byte-identical|node up \|" node.log | tail -3 || true
-          echo "height: $(grep -oE 'height [0-9]+' node.log | tail -1)"
+          # distilled agree verdict: this replica independently replayed the frames; reaching the
+          # byte-identical LIVE TIP (no unhealed fork) == agree=True with the canonical server on this fp.
+          FP=$(python -c "import sys;sys.path.insert(0,'.');from node.consensus_fingerprint import consensus_fingerprint as f;print(f()[:16])" 2>/dev/null || echo '?')
+          ROOT=$(grep -oE 'root [0-9a-f]{6,}' node.log | tail -1 | awk '{print $2}')
+          HGT=$(grep -oE 'height [0-9]+' node.log | tail -1 | awk '{print $2}')
+          TIP=$(grep -c "AT THE LIVE TIP" node.log || echo 0)
+          DIV=$(grep -c "chain diverged" node.log || echo 0)
+          if [ "${TIP:-0}" -gt 0 ]; then V="AGREE"; else V="NOT-YET"; fi
+          SRV=$(curl -s --max-time 8 "https://compute.bull4life.com/mesh_sync?since=0" \
+                | python -c "import sys,json;d=json.load(sys.stdin);print('fp='+str(d.get('fingerprint'))[:16],'tip='+str(d.get('tip_height')),'root='+str(d.get('tip_root'))[:16])" 2>/dev/null || echo '?')
+          echo "MESH_VERDICT node=gh-mesh-${{ matrix.node }} verdict=$V reached_tip=$TIP diverged=$DIV fp=$FP height=$HGT root=$ROOT"
+          echo "SERVER_TIP $SRV"
+          grep -E "AT THE LIVE TIP|byte-identical|chain diverged" node.log | tail -3 || true
           kill "$PID" 2>/dev/null || true

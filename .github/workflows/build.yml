@@ -45,7 +45,10 @@ jobs:
       - name: Locate binary
         working-directory: engine
         run: |
-          f=$(ls -1 dist/b4l_node* 2>/dev/null | grep -Ev '\.(zip|dist)$' | head -n1)
+          f=""
+          for c in dist/b4l_node.exe dist/b4l_node.bin dist/b4l_node; do
+            if [ -f "$c" ]; then f="$c"; break; fi
+          done
           if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
           cp "$f" "../${{ matrix.out }}"; chmod +x "../${{ matrix.out }}"
           echo "size: $(du -h ../${{ matrix.out }} | cut -f1)"

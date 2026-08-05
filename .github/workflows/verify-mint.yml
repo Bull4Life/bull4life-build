@@ -1,0 +1,78 @@
+name: Verify + mint (public, reliable)
+# Public CI = FREE unlimited minutes AND reliable scheduling. The private bull4life-engine repo silently SKIPS
+# its scheduled runs (GitHub throttles private-repo schedules) + caps free minutes + queues behind the org pool —
+# which repeatedly stalled minting. This moves the verify+mint brain here: it clones the private engine source
+# READ+WRITE via ENGINE_TOKEN (source discarded with the runner, never committed/logged here), pulls the
+# coordinator candles (fixes Binance-451), re-runs the DETERMINISTIC verify (strategy_plan --once --no-deliver),
+# mints B4L, and pushes ONLY the chain + credits back to the private repo. Replaces bull4life-engine/verify-pool.yml
+# (whose schedule gets disabled once this is confirmed live).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */3 * * *'   # every 3h — public schedules fire reliably; tighter than the old (skipped) 6h
+concurrency:
+  group: verify-mint
+  cancel-in-progress: false
+jobs:
+  verify-mint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone private engine source (read+write token, never logged)
+        run: |
+          git clone "https://x-access-token:${ENGINE_TOKEN}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+          cd engine && git config user.name "Bull4Life CI (public mint)" && git config user.email "dmanobela@gmail.com"
+        env:
+          ENGINE_TOKEN: ${{ secrets.ENGINE_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        working-directory: engine
+        run: pip install -r requirements-node.txt ccxt
+      - name: Cache coordinator candles (delta top-up after first run)
+        uses: actions/cache@v4
+        with:
+          path: ~/b4l_candles
+          key: b4l-candles-${{ github.run_id }}
+          restore-keys: |
+            b4l-candles-
+      - name: Pull coordinator candles (avoid Binance-451 → the ~54 skipped targets mint)
+        working-directory: engine
+        env:
+          B4L_COORDINATOR: https://compute.bull4life.com
+        run: |
+          mkdir -p "$HOME/b4l_candles"
+          echo "B4L_CANDLE_DIR=$HOME/b4l_candles" >> "$GITHUB_ENV"
+          B4L_CANDLE_DIR="$HOME/b4l_candles" python tools/ci_pull_candles.py || true
+      - name: Verify the pool (re-run donated diamonds → merge winners → BANK CREDITS) — NO deliver (HOLD)
+        working-directory: engine
+        env:
+          B4L_COORDINATOR: https://compute.bull4life.com
+          B4L_DRAIN_TOKEN: ${{ secrets.B4L_DRAIN_TOKEN }}
+        run: python strategy_plan.py --once --no-deliver || true
+      - name: Mint B4L (append PoVC blocks — the token half)
+        working-directory: engine
+        run: |
+          python b4l_chain/chain.py --mint || true
+          echo "--- chain state after mint ---"
+          python b4l_chain/chain.py --verify | tail -3 || true
+      - name: Commit + push minted chain + credits back to the private engine
+        working-directory: engine
+        run: |
+          for p in strategies compute/verified_credits.json compute/grid_results b4l_chain/b4l_chain.jsonl; do
+            git add "$p" 2>/dev/null || true
+          done
+          echo "--- chain tip on disk ---"; tail -1 b4l_chain/b4l_chain.jsonl 2>/dev/null | head -c 200; echo
+          echo "--- staged ---"; git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "no new verified winners / no new mint this run"
+          else
+            git commit -m "CI verify+mint (public): banked verified donor credits + minted B4L blocks [skip ci]"
+            # rebase onto any concurrent Master push, then fast-forward push (public is the sole minter once cutover)
+            git pull --rebase origin master 2>/dev/null || true
+            git push origin HEAD:master
+          fi

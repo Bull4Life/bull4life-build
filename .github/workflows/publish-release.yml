@@ -1,0 +1,66 @@
+name: Publish node release
+
+# Publishes already-built node binaries (from a build.yml run's artifacts) as a GitHub Release —
+# entirely server-side (GitHub -> GitHub), so a release never depends on Daniel's laptop/wifi
+# ([[master-laptop-offload]]). Point the donor fleet (bull4life-donate/donate.yml) at the tag this creates.
+# Reuses an existing build run's artifacts (no 40-min rebuild). Bump `version` with each real release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'build.yml run id that holds the artifacts'
+        required: true
+        default: '30929678086'
+      version:
+        description: 'release version (no leading v)'
+        required: true
+        default: '1.9.0'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull the built binaries from the build run + normalize names
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p out
+          grab () {   # $1 = artifact name, $2 = canonical release asset name
+            rm -rf dl && mkdir dl
+            if gh run download "${{ github.event.inputs.run_id }}" -R "${{ github.repository }}" -n "$1" -D dl 2>/dev/null; then
+              f=$(find dl -type f | head -1)
+              if [ -n "$f" ]; then cp "$f" "out/$2"; echo "  + $2  <-  $1  ($(stat -c%s "$f") bytes)"; fi
+            else
+              echo "  ! artifact $1 not found on run ${{ github.event.inputs.run_id }} (skipping)"
+            fi
+          }
+          grab b4l_node-linux       b4l_node-linux
+          grab b4l_node-linux-arm64 b4l_node-linux-arm64
+          grab b4l_node-windows.exe b4l_node-windows.exe
+          echo "=== assets to publish ==="
+          ls -la out
+          sha256sum out/* || true
+          test -f out/b4l_node-linux || { echo "FATAL: no linux binary — the fleet needs this"; exit 1; }
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          V="v${{ github.event.inputs.version }}"
+          NOTES="Node binaries $V — auto-published from build run ${{ github.event.inputs.run_id }} (server-side, no laptop). The public grid fleet (bull4life-donate) pins this tag so donors run current-logic nodes that reproduce the verifier."
+          if gh release view "$V" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release $V exists -> uploading assets (clobber)"
+            gh release upload "$V" out/* -R "${{ github.repository }}" --clobber
+          else
+            echo "creating release $V"
+            gh release create "$V" out/* -R "${{ github.repository }}" -t "$V" -n "$NOTES"
+          fi
+          echo "=== published ==="
+          gh release view "$V" -R "${{ github.repository }}" --json assets --jq '.assets[] | "  \(.name)  \(.size)b  \(.url)"'

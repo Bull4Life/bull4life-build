@@ -1,0 +1,44 @@
+name: Genesis-A alloc (one-shot, fast)
+# Land the Master-locked 1M launch alloc (80k owner + 920k MM) WITHOUT the ~60m verify-pool. Idempotent + re-alloc-on-
+# divergence: resets to origin tip each attempt, runs the idempotent --alloc, pushes; a concurrent chain writer just
+# makes --alloc a no-op. Same concurrency group as the mint so two chain writers never overlap. CI = sole writer (no local push).
+on:
+  workflow_dispatch:
+concurrency:
+  group: verify-mint
+  cancel-in-progress: false
+jobs:
+  alloc:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone private engine source (read+write token, never logged)
+        run: |
+          git clone "https://x-access-token:${ENGINE_TOKEN}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+          cd engine && git config user.name "Bull4Life CI (alloc)" && git config user.email "dmanobela@gmail.com"
+        env:
+          ENGINE_TOKEN: ${{ secrets.ENGINE_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install -q cryptography
+      - name: Land Genesis-A alloc (idempotent) + push
+        working-directory: engine
+        run: |
+          pushed=0
+          for i in 1 2 3 4 5 6; do
+            git fetch origin master -q || true
+            git reset --hard origin/master -q
+            python b4l_chain/chain.py --alloc || true
+            git add b4l_chain/b4l_chain.jsonl 2>/dev/null || true
+            if git diff --cached --quiet; then echo "alloc already present on origin — nothing to push"; pushed=1; break; fi
+            git commit -m "Genesis-A: launch alloc 80k owner + 920k MM = 1M [skip ci]"
+            if git push origin HEAD:master; then echo "alloc pushed (attempt $i)"; pushed=1; break; fi
+            echo "push race attempt $i — refetch+reset+retry"; sleep 4
+          done
+          [ "$pushed" = 1 ] || { echo "alloc push failed after retries"; exit 1; }
+          echo "--- chain tip ---"; tail -1 b4l_chain/b4l_chain.jsonl | head -c 220; echo
+          python b4l_chain/chain.py --verify | tail -3 || true

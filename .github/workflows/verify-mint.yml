@@ -56,6 +56,9 @@ jobs:
         run: python strategy_plan.py --once --no-deliver || true
       - name: Land queued signed txs (bot records / names / transfers — the on-chain OMNI lane #65)
         working-directory: engine
+        env:
+          B4L_COORDINATOR: https://compute.bull4life.com
+          B4L_DRAIN_TOKEN: ${{ secrets.B4L_DRAIN_TOKEN }}
         run: |
           python b4l_chain/chain.py --drain || true
       - name: Mint B4L (append PoVC blocks — the token half)

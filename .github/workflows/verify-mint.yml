@@ -16,7 +16,9 @@ concurrency:
 jobs:
   verify-mint:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 300   # verify-pool re-runs ~162 strategies (progressing, not hung) + can exceed 90m; give
+                           # it room so the run REACHES drain+mint+push (a 90m timeout was killing every run in
+                           # verify-pool → chain froze at h161 with no block ever minted). Public CI = free minutes.
     defaults:
       run:
         shell: bash

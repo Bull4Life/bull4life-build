@@ -54,6 +54,10 @@ jobs:
           B4L_COORDINATOR: https://compute.bull4life.com
           B4L_DRAIN_TOKEN: ${{ secrets.B4L_DRAIN_TOKEN }}
         run: python strategy_plan.py --once --no-deliver || true
+      - name: Land queued signed txs (bot records / names / transfers — the on-chain OMNI lane #65)
+        working-directory: engine
+        run: |
+          python b4l_chain/chain.py --drain || true
       - name: Mint B4L (append PoVC blocks — the token half)
         working-directory: engine
         run: |
@@ -63,7 +67,7 @@ jobs:
       - name: Commit + push minted chain + credits back to the private engine
         working-directory: engine
         run: |
-          for p in strategies compute/verified_credits.json compute/grid_results b4l_chain/b4l_chain.jsonl; do
+          for p in strategies compute/verified_credits.json compute/grid_results b4l_chain/b4l_chain.jsonl b4l_chain/pending_tx.jsonl; do
             git add "$p" 2>/dev/null || true
           done
           echo "--- chain tip on disk ---"; tail -1 b4l_chain/b4l_chain.jsonl 2>/dev/null | head -c 200; echo

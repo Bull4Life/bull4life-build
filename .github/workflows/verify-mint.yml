@@ -63,6 +63,11 @@ jobs:
           B4L_DRAIN_TOKEN: ${{ secrets.B4L_DRAIN_TOKEN }}
         run: |
           python b4l_chain/chain.py --drain || true
+      - name: Genesis-A launch allocation (once — 80k owner + 920k MM = 1M)
+        working-directory: engine
+        run: |
+          # __B4L_GENESIS_ALLOC__ idempotent: append refuses a 2nd alloc, safe no-op after the first. Sole-writer, no fork.
+          python b4l_chain/chain.py --alloc || true
       - name: Mint B4L (append PoVC blocks — the token half)
         working-directory: engine
         run: |

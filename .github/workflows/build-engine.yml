@@ -1,0 +1,48 @@
+name: Build engine app
+# Public CI (FREE minutes) builds the ONE PROGRAM (engine app: native pywebview UI + node + B4L chain in-process)
+# into a single Windows .exe users run to join Bull4Life. Off Master's laptop, out of the billed private repo.
+# Private engine source cloned READ-ONLY into the ephemeral runner, compiled with Nuitka, discarded.
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    name: build-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: windows-x64
+            out: Bull4LifeEngine-windows.exe
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone private engine source (read-only token, never logged)
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ secrets.ENGINE_TOKEN }}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build deps (+ pywebview for the native window)
+        run: pip install "nuitka[onefile]" pywebview zstandard numpy pandas psutil cryptography certifi requests
+      - name: Build (Nuitka onefile)
+        working-directory: engine
+        run: python build_engine_app.py
+      - name: Locate binary
+        working-directory: engine
+        run: |
+          f=""
+          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.bin dist/engine_app; do
+            if [ -f "$c" ]; then f="$c"; break; fi
+          done
+          if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
+          cp "$f" "../${{ matrix.out }}"
+          echo "size: $(du -h ../${{ matrix.out }} | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: ${{ matrix.out }}
+          retention-days: 14

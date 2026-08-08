@@ -81,7 +81,15 @@ jobs:
             echo "no new verified winners / no new mint this run"
           else
             git commit -m "CI verify+mint (public): banked verified donor credits + minted B4L blocks [skip ci]"
-            # rebase onto any concurrent Master push, then fast-forward push (public is the sole minter once cutover)
-            git pull --rebase origin master 2>/dev/null || true
-            git push origin HEAD:master
+            # PUSH-RACE-SAFE (2026-08-08): a concurrent code push (Master) between rebase and push used to reject the whole
+            # mint (lost the increment, wasted the run). Retry fetch->rebase->push up to 6x. The mint is the SOLE writer of
+            # b4l_chain.jsonl, so rebasing our chain append onto code-only commits never conflicts.
+            pushed=0
+            for i in 1 2 3 4 5 6; do
+              git fetch origin master -q 2>/dev/null || true
+              git pull --rebase origin master 2>/dev/null || true
+              if git push origin HEAD:master; then echo "pushed (attempt $i)"; pushed=1; break; fi
+              echo "push race on attempt $i — refetch+rebase+retry"; sleep 4
+            done
+            [ "$pushed" = 1 ] || { echo "PUSH FAILED after retries — next mint re-mints (banked credits persist)"; exit 1; }
           fi

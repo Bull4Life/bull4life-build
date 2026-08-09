@@ -12,6 +12,10 @@ on:
         description: 'app version (semver, e.g. 1.2.0)'
         required: true
         default: '1.2.0'
+      launcher_only:
+        description: 'rebuild ONLY the launcher exe + clobber it onto the existing release (keeps bundle+manifest valid)'
+        required: false
+        default: 'false'
 permissions:
   contents: write        # needed for `gh release create`
 jobs:
@@ -42,6 +46,7 @@ jobs:
           [ -n "$f" ] && cp "$f" ../Bull4LifeLauncher.exe && echo "launcher: $(du -h ../Bull4LifeLauncher.exe | cut -f1)"
           test -f ../Bull4LifeLauncher.exe
       - name: Assemble the app bundle (embeddable Python + deps + engine source)
+        if: ${{ github.event.inputs.launcher_only != 'true' }}
         working-directory: engine
         run: |
           set -e
@@ -74,13 +79,25 @@ jobs:
           path: Bull4LifeLauncher.exe
           retention-days: 14
       - uses: actions/upload-artifact@v4
+        if: ${{ github.event.inputs.launcher_only != 'true' }}
         with:
           name: Bull4LifeEngine-bundle
           path: |
             Bull4LifeEngine-*-windows-x64.tar.gz
             bundle.sha256
           retention-days: 14
+      - name: LAUNCHER-ONLY — clobber just the launcher onto the existing release (bundle + manifest untouched)
+        if: ${{ github.event.inputs.launcher_only == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${{ github.event.inputs.app_version }}"
+          TAG="engine-app-v$VER"
+          gh release upload "$TAG" "Bull4LifeLauncher.exe" --clobber -R Bull4Life/bull4life-build
+          echo "=== LAUNCHER_URL https://github.com/Bull4Life/bull4life-build/releases/download/$TAG/Bull4LifeLauncher.exe ==="
+          echo "=== launcher-only: bundle + signed manifest for $VER left intact ==="
       - name: Publish a GitHub release (public assets — server + launcher pull these directly, no laptop 83MB)
+        if: ${{ github.event.inputs.launcher_only != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

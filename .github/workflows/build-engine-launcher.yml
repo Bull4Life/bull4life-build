@@ -52,15 +52,17 @@ jobs:
           pth=$(ls bundle/runtime/python*._pth); sed -i 's/^#import site/import site/' "$pth"
           curl -sSL -o get-pip.py https://bootstrap.pypa.io/get-pip.py
           bundle/runtime/python.exe get-pip.py --no-warn-script-location
-          bundle/runtime/python.exe -m pip install --no-warn-script-location \
+          # setuptools+wheel FIRST (embeddable python lacks them → source-build deps fail with BackendUnavailable);
+          # then install deps preferring prebuilt wheels (all these ship Windows wheels → no source builds)
+          bundle/runtime/python.exe -m pip install --no-warn-script-location setuptools wheel
+          bundle/runtime/python.exe -m pip install --no-warn-script-location --prefer-binary \
             pywebview cryptography pandas numpy psutil requests certifi pyyaml ccxt pythonnet
-          # copy engine source FLAT into the bundle root (runtime/ sits alongside engine_app.py) so the launcher's
-          # sibling-python (bundle/runtime/pythonw.exe) runs bundle/engine_app.py directly, imports resolve from source
-          rsync -a --exclude '.git' --exclude 'candles' --exclude '__pycache__' --exclude '*.pyc' \
-                --exclude 'bundle' --exclude 'out_launcher' --exclude 'pyembed.zip' --exclude 'get-pip.py' \
-                --exclude 'liquidity_sweep_test/gpu_spike/venv' --exclude 'marketing_purpose_strategy_results' \
-                --exclude 'reproducibility' --exclude '_retired' \
-                ./ bundle/
+          # copy engine source FLAT into the bundle root via tar-pipe (rsync isn't on Windows runners); runtime/ stays put
+          tar --exclude='./.git' --exclude='./candles' --exclude='./__pycache__' --exclude='*.pyc' \
+              --exclude='./bundle' --exclude='./out_launcher' --exclude='./pyembed.zip' --exclude='./get-pip.py' \
+              --exclude='./liquidity_sweep_test/gpu_spike/venv' --exclude='./marketing_purpose_strategy_results' \
+              --exclude='./reproducibility' --exclude='./_retired' \
+              -cf - . | (cd bundle && tar -xf -)
           tar -C bundle -czf "../Bull4LifeEngine-$VER-windows-x64.tar.gz" .
           echo "bundle: $(du -h ../Bull4LifeEngine-$VER-windows-x64.tar.gz | cut -f1)"
           sha256sum "../Bull4LifeEngine-$VER-windows-x64.tar.gz" | tee ../bundle.sha256

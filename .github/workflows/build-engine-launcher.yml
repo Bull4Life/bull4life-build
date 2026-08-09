@@ -1,0 +1,78 @@
+name: Build engine launcher + bundle
+# #68 (Master 2026-08-09): the PEX-style auto-update model for the Bull4Life engine app. Builds TWO artifacts, both OFF
+# Master's laptop on FREE public CI:
+#   1) Bull4LifeLauncher.exe  — the thin permanent Nuitka launcher (bull4life_launch.py) that fetches+verifies+runs the bundle.
+#   2) Bull4LifeEngine-<ver>-windows-x64.tar.gz — the app BUNDLE = an embeddable Python runtime + deps + the engine source,
+#      so the launcher's sibling-python runs engine_app.py from SOURCE (no frozen-onefile component-spawn breakage).
+# Private engine source cloned read-only, discarded with the runner.
+on:
+  workflow_dispatch:
+    inputs:
+      app_version:
+        description: 'app version (semver, e.g. 1.2.0)'
+        required: true
+        default: '1.2.0'
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone private engine source (read-only token, never logged)
+        run: git clone --depth 1 "https://x-access-token:${ENGINE_TOKEN}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+        env:
+          ENGINE_TOKEN: ${{ secrets.ENGINE_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the thin launcher (Nuitka onefile + cryptography, no console)
+        working-directory: engine
+        run: |
+          pip install "nuitka[onefile]" cryptography
+          python -m nuitka --onefile --standalone --assume-yes-for-downloads \
+            --include-package=cryptography --include-package=cffi \
+            --windows-console-mode=disable \
+            --output-dir=out_launcher --output-filename=Bull4LifeLauncher.exe \
+            launcher/bull4life_launch.py
+          f=$(find out_launcher -name 'Bull4LifeLauncher.exe' | head -1)
+          [ -n "$f" ] && cp "$f" ../Bull4LifeLauncher.exe && echo "launcher: $(du -h ../Bull4LifeLauncher.exe | cut -f1)"
+          test -f ../Bull4LifeLauncher.exe
+      - name: Assemble the app bundle (embeddable Python + deps + engine source)
+        working-directory: engine
+        run: |
+          set -e
+          VER="${{ github.event.inputs.app_version }}"
+          PYV=3.12.7
+          mkdir -p bundle/runtime
+          curl -sSL -o pyembed.zip "https://www.python.org/ftp/python/$PYV/python-$PYV-embed-amd64.zip"
+          unzip -q pyembed.zip -d bundle/runtime
+          # enable `import site` so pip works inside the embeddable python
+          pth=$(ls bundle/runtime/python*._pth); sed -i 's/^#import site/import site/' "$pth"
+          curl -sSL -o get-pip.py https://bootstrap.pypa.io/get-pip.py
+          bundle/runtime/python.exe get-pip.py --no-warn-script-location
+          bundle/runtime/python.exe -m pip install --no-warn-script-location \
+            pywebview cryptography pandas numpy psutil requests certifi pyyaml ccxt pythonnet
+          # copy engine source FLAT into the bundle root (runtime/ sits alongside engine_app.py) so the launcher's
+          # sibling-python (bundle/runtime/pythonw.exe) runs bundle/engine_app.py directly, imports resolve from source
+          rsync -a --exclude '.git' --exclude 'candles' --exclude '__pycache__' --exclude '*.pyc' \
+                --exclude 'bundle' --exclude 'out_launcher' --exclude 'pyembed.zip' --exclude 'get-pip.py' \
+                --exclude 'liquidity_sweep_test/gpu_spike/venv' --exclude 'marketing_purpose_strategy_results' \
+                --exclude 'reproducibility' --exclude '_retired' \
+                ./ bundle/
+          tar -C bundle -czf "../Bull4LifeEngine-$VER-windows-x64.tar.gz" .
+          echo "bundle: $(du -h ../Bull4LifeEngine-$VER-windows-x64.tar.gz | cut -f1)"
+          sha256sum "../Bull4LifeEngine-$VER-windows-x64.tar.gz" | tee ../bundle.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bull4LifeLauncher-windows
+          path: Bull4LifeLauncher.exe
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bull4LifeEngine-bundle
+          path: |
+            Bull4LifeEngine-*-windows-x64.tar.gz
+            bundle.sha256
+          retention-days: 14

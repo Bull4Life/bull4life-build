@@ -68,33 +68,38 @@ jobs:
         run: |
           # __B4L_GENESIS_ALLOC__ idempotent: append refuses a 2nd alloc, safe no-op after the first. Sole-writer, no fork.
           python b4l_chain/chain.py --alloc || true
-      - name: Mint B4L (append PoVC blocks — the token half)
+      - name: Mint B4L (append PoVC blocks) + VERIFY-GATE
         working-directory: engine
         run: |
           python b4l_chain/chain.py --mint || true
-          echo "--- chain state after mint ---"
-          python b4l_chain/chain.py --verify | tail -3 || true
-      - name: Commit + push minted chain + credits back to the private engine
+          echo "--- verify GATES the push (chain.py --verify exits non-zero on an invalid chain) ---"
+          python b4l_chain/chain.py --verify || { echo "POST-MINT VERIFY FAILED -> aborting before push (never push an invalid chain)"; exit 1; }
+      - name: Commit + push (verify-gated, re-mint-on-divergence)
         working-directory: engine
         run: |
-          for p in strategies compute/verified_credits.json compute/grid_results b4l_chain/b4l_chain.jsonl b4l_chain/pending_tx.jsonl; do
-            git add "$p" 2>/dev/null || true
-          done
+          _stage(){ for p in strategies compute/verified_credits.json compute/grid_results b4l_chain/b4l_chain.jsonl b4l_chain/pending_tx.jsonl; do git add "$p" 2>/dev/null || true; done; }
+          _stage
           echo "--- chain tip on disk ---"; tail -1 b4l_chain/b4l_chain.jsonl 2>/dev/null | head -c 200; echo
-          echo "--- staged ---"; git diff --cached --stat
-          if git diff --cached --quiet; then
-            echo "no new verified winners / no new mint this run"
-          else
-            git commit -m "CI verify+mint (public): banked verified donor credits + minted B4L blocks [skip ci]"
-            # PUSH-RACE-SAFE (2026-08-08): a concurrent code push (Master) between rebase and push used to reject the whole
-            # mint (lost the increment, wasted the run). Retry fetch->rebase->push up to 6x. The mint is the SOLE writer of
-            # b4l_chain.jsonl, so rebasing our chain append onto code-only commits never conflicts.
-            pushed=0
-            for i in 1 2 3 4 5 6; do
-              git fetch origin master -q 2>/dev/null || true
-              git pull --rebase origin master 2>/dev/null || true
-              if git push origin HEAD:master; then echo "pushed (attempt $i)"; pushed=1; break; fi
-              echo "push race on attempt $i — refetch+rebase+retry"; sleep 4
-            done
-            [ "$pushed" = 1 ] || { echo "PUSH FAILED after retries — next mint re-mints (banked credits persist)"; exit 1; }
-          fi
+          if git diff --cached --quiet; then echo "no new mint this run"; exit 0; fi
+          git commit -m "CI verify+mint (public): banked credits + minted B4L blocks [skip ci]"
+          # 2026-08-09 h175 BREAK FIX: the old rebase-only push rebased a mint block onto a changed tip (e.g. the alloc)
+          # WITHOUT recomputing total_b4l -> pushed an unverifiable chain. Now: on any push rejection, RE-MINT on the
+          # fresh origin tip (reset + recompute total_b4l), never rebase a stale block; and VERIFY-GATE every push.
+          pushed=0
+          for i in 1 2 3 4 5 6; do
+            if git push origin HEAD:master; then echo "pushed (attempt $i)"; pushed=1; break; fi
+            echo "push rejected attempt $i -> RE-MINT on fresh origin tip (never rebase a stale total_b4l)"
+            cp -f compute/verified_credits.json /tmp/vc.json 2>/dev/null || true
+            git fetch origin master -q || true
+            git reset --hard origin/master -q
+            cp -f /tmp/vc.json compute/verified_credits.json 2>/dev/null || true
+            python b4l_chain/chain.py --drain || true
+            python b4l_chain/chain.py --alloc || true
+            python b4l_chain/chain.py --mint || true
+            python b4l_chain/chain.py --verify || { echo "recomputed chain invalid -> abort push"; exit 1; }
+            _stage
+            if git diff --cached --quiet; then echo "nothing new to mint on fresh tip"; pushed=1; break; fi
+            git commit -m "CI verify+mint (public): re-minted on fresh tip [skip ci]"
+            sleep 3
+          done
+          [ "$pushed" = 1 ] || { echo "PUSH FAILED after retries -> next mint re-mints (credits persist)"; exit 1; }

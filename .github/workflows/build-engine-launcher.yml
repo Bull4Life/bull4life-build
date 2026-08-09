@@ -12,6 +12,8 @@ on:
         description: 'app version (semver, e.g. 1.2.0)'
         required: true
         default: '1.2.0'
+permissions:
+  contents: write        # needed for `gh release create`
 jobs:
   build:
     runs-on: windows-latest
@@ -78,3 +80,18 @@ jobs:
             Bull4LifeEngine-*-windows-x64.tar.gz
             bundle.sha256
           retention-days: 14
+      - name: Publish a GitHub release (public assets — server + launcher pull these directly, no laptop 83MB)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${{ github.event.inputs.app_version }}"
+          TAG="engine-app-v$VER"
+          BUNDLE="Bull4LifeEngine-$VER-windows-x64.tar.gz"
+          SHA=$(sha256sum "$BUNDLE" | cut -d' ' -f1)
+          echo "=== BUNDLE_SHA256 $SHA ==="
+          gh release delete "$TAG" -R Bull4Life/bull4life-build --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" -R Bull4Life/bull4life-build --title "Engine App $VER" \
+            --notes "Bull4Life Engine app $VER — thin launcher + bundle. bundle sha256=$SHA" \
+            "Bull4LifeLauncher.exe" "$BUNDLE"
+          echo "=== LAUNCHER_URL https://github.com/Bull4Life/bull4life-build/releases/download/$TAG/Bull4LifeLauncher.exe ==="
+          echo "=== BUNDLE_URL https://github.com/Bull4Life/bull4life-build/releases/download/$TAG/$BUNDLE ==="

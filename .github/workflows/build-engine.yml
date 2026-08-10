@@ -1,7 +1,8 @@
 name: Build engine app
-# Public CI (FREE minutes) builds THE ONE PROGRAM (engine app: native pywebview UI + node + B4L chain in-process) into a
-# single binary per OS — Windows .exe, macOS, Linux — that users run to join Bull4Life. Off Master's laptop, out of the
-# billed private repo. Private engine source cloned READ-ONLY into the ephemeral runner, compiled with Nuitka, discarded.
+# Public CI (FREE minutes) builds THE ONE PROGRAM (engine app: node + B4L chain + UI in-process) into a single binary
+# per OS — Windows .exe (native WebView2 window), macOS .app (native WKWebView window), Linux (opens the dashboard in the
+# user's browser via the app's built-in fallback — the GTK/webkit backend is unreliable to build + needs webkit2gtk on
+# the user's box). Off Master's laptop, out of the billed private repo. Engine source cloned READ-ONLY, compiled, discarded.
 # fail-fast:false → each OS builds independently (a Mac/Linux hiccup never blocks the Windows binary).
 on:
   workflow_dispatch:
@@ -17,7 +18,7 @@ jobs:
             out: Bull4LifeEngine-windows.exe
           - runner: macos-latest
             arch: macos-arm64
-            out: Bull4LifeEngine-macos
+            out: Bull4LifeEngine-macos.app
           - runner: ubuntu-latest
             arch: linux-x64
             out: Bull4LifeEngine-linux
@@ -33,28 +34,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Linux system deps (webkit2gtk for the pywebview GTK backend)
-        if: matrix.runner == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgirepository1.0-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libcairo2-dev pkg-config python3-dev || \
-          sudo apt-get install -y libgirepository1.0-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.0 libcairo2-dev pkg-config python3-dev
-      - name: Install build deps (+ the pywebview backend for THIS OS)
+      - name: Install build deps (+ the native-window backend for THIS OS)
         run: |
           pip install "nuitka[onefile]" zstandard numpy pandas psutil cryptography certifi requests
           case "${{ matrix.runner }}" in
-            windows-latest) pip install pywebview ;;
-            macos-latest)   pip install pywebview pyobjc-framework-WebKit pyobjc-framework-Cocoa ;;
-            ubuntu-latest)  pip install pywebview PyGObject pycairo ;;
+            windows-latest) pip install pywebview ;;                                              # WebView2 (native window)
+            macos-latest)   pip install pywebview pyobjc-framework-WebKit pyobjc-framework-Cocoa ;; # WKWebView (native window)
+            ubuntu-latest)  echo "linux: no pywebview — the app opens the dashboard in the user's browser (fallback)" ;;
           esac
-      - name: Build (Nuitka onefile)
+      - name: Build (Nuitka)
         working-directory: engine
         run: python build_engine_app.py
-      - name: Locate binary
+      - name: Locate binary / bundle
         working-directory: engine
         run: |
           f=""
-          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.bin dist/engine_app dist/engine_app.app; do
+          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.app dist/engine_app.bin dist/engine_app; do
             if [ -e "$c" ]; then f="$c"; break; fi
           done
           if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi

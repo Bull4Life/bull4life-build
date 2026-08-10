@@ -1,7 +1,8 @@
 name: Build engine app
-# Public CI (FREE minutes) builds the ONE PROGRAM (engine app: native pywebview UI + node + B4L chain in-process)
-# into a single Windows .exe users run to join Bull4Life. Off Master's laptop, out of the billed private repo.
-# Private engine source cloned READ-ONLY into the ephemeral runner, compiled with Nuitka, discarded.
+# Public CI (FREE minutes) builds THE ONE PROGRAM (engine app: native pywebview UI + node + B4L chain in-process) into a
+# single binary per OS — Windows .exe, macOS, Linux — that users run to join Bull4Life. Off Master's laptop, out of the
+# billed private repo. Private engine source cloned READ-ONLY into the ephemeral runner, compiled with Nuitka, discarded.
+# fail-fast:false → each OS builds independently (a Mac/Linux hiccup never blocks the Windows binary).
 on:
   workflow_dispatch:
 jobs:
@@ -14,6 +15,12 @@ jobs:
           - runner: windows-latest
             arch: windows-x64
             out: Bull4LifeEngine-windows.exe
+          - runner: macos-latest
+            arch: macos-arm64
+            out: Bull4LifeEngine-macos
+          - runner: ubuntu-latest
+            arch: linux-x64
+            out: Bull4LifeEngine-linux
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     defaults:
@@ -26,8 +33,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install build deps (+ pywebview for the native window)
-        run: pip install "nuitka[onefile]" pywebview zstandard numpy pandas psutil cryptography certifi requests
+      - name: Linux system deps (webkit2gtk for the pywebview GTK backend)
+        if: matrix.runner == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgirepository1.0-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libcairo2-dev pkg-config python3-dev || \
+          sudo apt-get install -y libgirepository1.0-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.0 libcairo2-dev pkg-config python3-dev
+      - name: Install build deps (+ the pywebview backend for THIS OS)
+        run: |
+          pip install "nuitka[onefile]" zstandard numpy pandas psutil cryptography certifi requests
+          case "${{ matrix.runner }}" in
+            windows-latest) pip install pywebview ;;
+            macos-latest)   pip install pywebview pyobjc-framework-WebKit pyobjc-framework-Cocoa ;;
+            ubuntu-latest)  pip install pywebview PyGObject pycairo ;;
+          esac
       - name: Build (Nuitka onefile)
         working-directory: engine
         run: python build_engine_app.py
@@ -35,12 +54,13 @@ jobs:
         working-directory: engine
         run: |
           f=""
-          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.bin dist/engine_app; do
-            if [ -f "$c" ]; then f="$c"; break; fi
+          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.bin dist/engine_app dist/engine_app.app; do
+            if [ -e "$c" ]; then f="$c"; break; fi
           done
           if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
-          cp "$f" "../${{ matrix.out }}"
-          echo "size: $(du -h ../${{ matrix.out }} | cut -f1)"
+          cp -r "$f" "../${{ matrix.out }}"
+          chmod +x "../${{ matrix.out }}" 2>/dev/null || true
+          echo "size: $(du -sh ../${{ matrix.out }} | cut -f1)"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.out }}

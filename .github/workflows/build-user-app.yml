@@ -1,0 +1,85 @@
+name: Build user app
+# Public FREE-pool CI builds the THIN downloadable USER client (user_app.py) — the compute-flywheel app.
+# One clean app: standalone FOLDER zipped (AV-safe; a onefile self-extracts and Defender quarantines it — unsigned).
+# CPU + GPU in one app: numba + CUDA toolkit bundled on Win/Linux (fail-soft -> CPU-only if the GPU stack can't build).
+# REVEALS NOTHING: engine source cloned read-only + discarded; gated by check_thin_bundle (no readable IP) +
+# scan_bundle_secrets (no keys/tokens/handle) BEFORE the artifact is uploadable. Brain (strategy_plan) excluded.
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    name: build-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: windows-x64
+            out: Bull4LifeEngine-windows.zip
+            gpu: "yes"
+          - runner: ubuntu-latest
+            arch: linux-x64
+            out: Bull4LifeEngine-linux.zip
+            gpu: "yes"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clone private engine source (read-only token, never logged)
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ secrets.ENGINE_TOKEN }}@github.com/Bull4Life/bull4life-engine.git" engine 2>/dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build deps (+ native-window backend + GPU stack, fail-soft)
+        run: |
+          pip install "nuitka[onefile]" zstandard numpy pandas psutil cryptography certifi requests
+          case "${{ matrix.runner }}" in
+            windows-latest) pip install pywebview ;;
+            ubuntu-latest)  echo "linux: browser fallback (no pywebview)" ;;
+          esac
+          if [ "${{ matrix.gpu }}" = "yes" ]; then
+            # GPU stack: numba + CUDA toolkit libs (libnvvm+cudart). Fail-soft: if these can't install, build_user_app.py
+            # sees no numba and produces a CPU-only app (still fully works). No GPU driver needed at build time.
+            pip install numba llvmlite nvidia-cuda-runtime-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cuda-nvcc-cu12 \
+              || echo "::warning::GPU deps failed to install — CPU-only build"
+          fi
+      - name: Build the THIN user app (AV-safe standalone folder)
+        working-directory: engine
+        run: |
+          # force the AV-safe folder path (neutralize --onefile; onefile self-extract -> Defender quarantine)
+          python - <<'PY'
+          import re
+          p='build_user_app.py'; s=open(p,encoding='utf-8').read()
+          s2=re.sub(r"cmd\.append\(\s*'--onefile'\s*\)","pass  # CI AV-safe: standalone folder",s)
+          open(p,'w',encoding='utf-8').write(s2); print('onefile->folder:', 'patched' if s2!=s else 'already')
+          PY
+          python build_user_app.py
+      - name: 'GATE 1 — no readable strategy IP in the bundle'
+        working-directory: engine
+        run: python tools/check_thin_bundle.py dist/user_app.dist
+      - name: 'GATE 2 — reveal nothing (no keys/tokens/handle)'
+        working-directory: engine
+        run: python tools/scan_bundle_secrets.py dist/user_app.dist
+      - name: Package (zip the standalone folder into ONE downloadable asset)
+        working-directory: engine
+        run: |
+          set -e
+          OUT="${{ matrix.out }}"
+          ls -la dist || true
+          [ -f dist/user_app.dist/user_app.exe ] && mv dist/user_app.dist/user_app.exe dist/user_app.dist/Bull4LifeEngine.exe || true
+          [ -f dist/user_app.dist/user_app.bin ] && mv dist/user_app.dist/user_app.bin dist/user_app.dist/Bull4LifeEngine || true
+          [ -f dist/user_app.dist/user_app ] && mv dist/user_app.dist/user_app dist/user_app.dist/Bull4LifeEngine || true
+          [ -d dist/user_app.dist ] && mv dist/user_app.dist dist/Bull4LifeEngine || true
+          case "${{ matrix.runner }}" in
+            windows-latest) powershell -Command "Compress-Archive -Path dist/Bull4LifeEngine -DestinationPath $OUT -Force" ;;
+            ubuntu-latest)  ( cd dist && zip -qry "../$OUT" Bull4LifeEngine ) ;;
+          esac
+          ls -la "$OUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: engine/${{ matrix.out }}
+          retention-days: 14

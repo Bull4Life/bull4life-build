@@ -1,6 +1,6 @@
 name: Build inference (7B Army - Slice 1 smoke)
 # 7B-Army fleet inference, Slice 1: prove the runtime works on a Linux runner.
-# Fetch llama.cpp (prebuilt CPU) + smoke-test Qwen2.5-Coder-7B-Instruct loads and returns tokens.
+# Build llama.cpp from source (CPU) + smoke-test Qwen2.5-Coder-7B-Instruct loads and returns tokens.
 # actions/cache the ~4.7GB GGUF: download-from-source ONCE, restore fast on later runs (fixes ephemeral-runner re-download).
 # CPU-only. No laptop. No secrets. Part of the 7B-Army build (engine, Master GO 2026-08-20).
 on:
@@ -29,28 +29,26 @@ jobs:
             "https://huggingface.co/$MODEL_REPO/resolve/main/$MODEL_FILE?download=true"
       - name: Verify model present
         run: ls -la models/ && du -h "models/$MODEL_FILE"
-      - name: Fetch llama.cpp (prebuilt CPU binary)
+      - name: Build llama.cpp from source (CPU)
         run: |
           set -e
-          URL=$(curl -sL https://api.github.com/repos/ggml-org/llama.cpp/releases/latest \
-                | grep -oE 'https://[^"]*bin-ubuntu-x64\.zip' | head -1)
-          echo "llama.cpp: $URL"
-          curl -L --fail -o llama.zip "$URL"
-          unzip -o -q llama.zip -d llama
-          CLI=$(find llama -name 'llama-cli' -type f | head -1)
-          chmod +x "$CLI"
+          sudo apt-get update -qq && sudo apt-get install -y -qq cmake build-essential
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp
+          cmake -S llama.cpp -B llama.cpp/build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF
+          cmake --build llama.cpp/build -j"$(nproc)" --target llama-cli
+          CLI=$(find llama.cpp/build -name 'llama-cli' -type f | head -1)
+          test -n "$CLI" || { echo "FAIL: llama-cli not built"; find llama.cpp/build -name 'llama*' -type f; exit 1; }
+          echo "built: $CLI"
           echo "LLAMA_CLI=$CLI" >> $GITHUB_ENV
-          echo "LLAMA_DIR=$(dirname "$CLI")" >> $GITHUB_ENV
       - name: SMOKE - model loads + returns tokens
         run: |
           set -e
-          export LD_LIBRARY_PATH="$LLAMA_DIR:$LD_LIBRARY_PATH"
           echo "=== running inference (coder prompt) ==="
           OUT=$("$LLAMA_CLI" -m "models/$MODEL_FILE" \
                 -p "Write a one-line Python function that returns the square of n." \
-                -n 64 -no-cnv --no-display-prompt 2>err.log) || { echo "run failed:"; tail -20 err.log; exit 1; }
+                -n 64 -no-cnv --no-display-prompt 2>err.log) || { echo "run failed:"; tail -25 err.log; exit 1; }
           echo "--- output ---"; echo "$OUT"; echo "--------------"
-          if [ -z "$(echo "$OUT" | tr -d '[:space:]')" ]; then echo "FAIL: empty output"; tail -20 err.log; exit 1; fi
+          if [ -z "$(echo "$OUT" | tr -d '[:space:]')" ]; then echo "FAIL: empty output"; tail -25 err.log; exit 1; fi
           echo ""
           echo "PASS: llama.cpp + Qwen2.5-Coder-7B loaded and returned tokens on a CPU Linux runner."
           echo "7B-Army Slice 1 runtime proven. Cache warm for next run."

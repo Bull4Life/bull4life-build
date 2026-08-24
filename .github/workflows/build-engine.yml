@@ -38,9 +38,9 @@ jobs:
         run: |
           pip install "nuitka[onefile]" zstandard numpy pandas psutil cryptography certifi requests
           case "${{ matrix.runner }}" in
-            windows-latest) pip install pywebview pythonnet ;;                                              # WebView2 (native window)
-            macos-latest)   pip install pywebview pyobjc-framework-WebKit pyobjc-framework-Cocoa imageio ;; # WKWebView + imageio (Nuitka PNG->.icns app icon)
-            ubuntu-latest)  echo "linux: no pywebview — the app opens the dashboard in the user's browser (fallback)" ;;
+            windows-latest) pip install pywebview pythonnet pystray pillow ;;                               # WebView2 native window + pystray/PIL tray Quit (close/stop-donation control)
+            macos-latest)   pip install pywebview pyobjc-framework-WebKit pyobjc-framework-Cocoa imageio pystray pillow ;; # WKWebView + imageio (Nuitka PNG->.icns app icon) + tray
+            ubuntu-latest)  pip install pystray pillow ; echo "linux: no pywebview — the app opens the dashboard in the user's browser (fallback) + tray Quit" ;;
           esac
       - name: Build (Nuitka)
         working-directory: engine

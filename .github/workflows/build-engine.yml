@@ -15,7 +15,7 @@ jobs:
         include:
           - runner: windows-latest
             arch: windows-x64
-            out: Bull4LifeEngine-windows.exe
+            out: Bull4LifeEngine-windows.zip
           - runner: macos-latest
             arch: macos-arm64
             out: Bull4LifeEngine-macos.app
@@ -48,14 +48,20 @@ jobs:
       - name: Locate binary / bundle
         working-directory: engine
         run: |
-          f=""
-          for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.app dist/engine_app.bin dist/engine_app; do
-            if [ -e "$c" ]; then f="$c"; break; fi
-          done
-          if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
-          cp -r "$f" "../${{ matrix.out }}"
-          chmod +x "../${{ matrix.out }}" 2>/dev/null || true
-          echo "size: $(du -sh ../${{ matrix.out }} | cut -f1)"
+          if [ -d dist/engine_app.dist ]; then
+            # Windows --standalone FOLDER (native-window build: pythonnet DLLs beside the .exe) -> zip it
+            powershell -NoProfile -Command "Compress-Archive -Path 'dist/engine_app.dist/*' -DestinationPath '../${{ matrix.out }}' -Force"
+            echo "zipped standalone folder -> ${{ matrix.out }} (unpacked $(du -sh dist/engine_app.dist | cut -f1))"
+          else
+            f=""
+            for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.app dist/engine_app.bin dist/engine_app; do
+              if [ -e "$c" ]; then f="$c"; break; fi
+            done
+            if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
+            cp -r "$f" "../${{ matrix.out }}"
+            chmod +x "../${{ matrix.out }}" 2>/dev/null || true
+            echo "size: $(du -sh ../${{ matrix.out }} | cut -f1)"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.out }}

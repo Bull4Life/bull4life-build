@@ -49,9 +49,17 @@ jobs:
         working-directory: engine
         run: |
           out="$PWD/../${{ matrix.out }}"
-          if [ -d dist/engine_app.dist ]; then
-            # --standalone FOLDER (native-window build: pythonnet DLLs beside the .exe) -> zip it.
-            # Compress-Archive is Windows-only (no powershell on the Linux runner) -> use zip elsewhere.
+          # Prefer the concrete single artifact (macOS .app bundle, linux/onefile binary) — only fall back to
+          # zipping the --standalone .dist FOLDER (the Windows native-window build, exe nested inside .dist).
+          f=""
+          for c in dist/engine_app.app dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.bin dist/engine_app; do
+            if [ -e "$c" ]; then f="$c"; break; fi
+          done
+          if [ -n "$f" ]; then
+            cp -r "$f" "$out"
+            chmod +x "$out" 2>/dev/null || true
+            echo "bundled $f -> ${{ matrix.out }} ($(du -sh "$out" | cut -f1))"
+          elif [ -d dist/engine_app.dist ] && [ -n "$(ls -A dist/engine_app.dist 2>/dev/null)" ]; then
             if [ "$RUNNER_OS" = "Windows" ]; then
               powershell -NoProfile -Command "Compress-Archive -Path 'dist/engine_app.dist/*' -DestinationPath '../${{ matrix.out }}' -Force"
             else
@@ -59,14 +67,7 @@ jobs:
             fi
             echo "zipped standalone folder -> ${{ matrix.out }} (unpacked $(du -sh dist/engine_app.dist | cut -f1))"
           else
-            f=""
-            for c in dist/engine_app.exe dist/Bull4LifeEngine.exe dist/engine_app.app dist/engine_app.bin dist/engine_app; do
-              if [ -e "$c" ]; then f="$c"; break; fi
-            done
-            if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
-            cp -r "$f" "$out"
-            chmod +x "$out" 2>/dev/null || true
-            echo "size: $(du -sh "$out" | cut -f1)"
+            echo "no binary"; ls -la dist || true; exit 1
           fi
       - uses: actions/upload-artifact@v4
         with:

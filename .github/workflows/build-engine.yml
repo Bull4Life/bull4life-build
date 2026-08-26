@@ -48,9 +48,15 @@ jobs:
       - name: Locate binary / bundle
         working-directory: engine
         run: |
+          out="$PWD/../${{ matrix.out }}"
           if [ -d dist/engine_app.dist ]; then
-            # Windows --standalone FOLDER (native-window build: pythonnet DLLs beside the .exe) -> zip it
-            powershell -NoProfile -Command "Compress-Archive -Path 'dist/engine_app.dist/*' -DestinationPath '../${{ matrix.out }}' -Force"
+            # --standalone FOLDER (native-window build: pythonnet DLLs beside the .exe) -> zip it.
+            # Compress-Archive is Windows-only (no powershell on the Linux runner) -> use zip elsewhere.
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              powershell -NoProfile -Command "Compress-Archive -Path 'dist/engine_app.dist/*' -DestinationPath '../${{ matrix.out }}' -Force"
+            else
+              ( cd dist/engine_app.dist && zip -qr "$out" . )
+            fi
             echo "zipped standalone folder -> ${{ matrix.out }} (unpacked $(du -sh dist/engine_app.dist | cut -f1))"
           else
             f=""
@@ -58,9 +64,9 @@ jobs:
               if [ -e "$c" ]; then f="$c"; break; fi
             done
             if [ -z "$f" ]; then echo "no binary"; ls -la dist || true; exit 1; fi
-            cp -r "$f" "../${{ matrix.out }}"
-            chmod +x "../${{ matrix.out }}" 2>/dev/null || true
-            echo "size: $(du -sh ../${{ matrix.out }} | cut -f1)"
+            cp -r "$f" "$out"
+            chmod +x "$out" 2>/dev/null || true
+            echo "size: $(du -sh "$out" | cut -f1)"
           fi
       - uses: actions/upload-artifact@v4
         with:

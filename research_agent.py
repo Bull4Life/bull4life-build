@@ -26,6 +26,9 @@ import os, sys, json, time, urllib.request, urllib.parse, random
 
 TREE_URL  = os.environ.get("TREE_URL", "").rstrip("/")  # improvement_tree.json (public build repo)
 BRANCH    = os.environ.get("BRANCH", "")                # which tree branch this agent owns (by key)
+MODEL_NAME= os.environ.get("MODEL_NAME", "?")           # e.g. Qwen3-14B (accountability: who produced this)
+MODEL_PARAMS=os.environ.get("MODEL_PARAMS", "?B")       # e.g. 14B  (size -> difficulty band)
+BAND      = os.environ.get("BAND", "M")                 # S / M / M+ / L (task-size the model should handle)
 CC_BASE   = os.environ.get("CC_BASE", "").rstrip("/")
 CC_TOKEN  = os.environ.get("CC_AGENT_TOKEN", "")
 AGENT     = os.environ.get("AGENT", "research-agent")
@@ -102,6 +105,9 @@ def load_branch():
 
 BR = load_branch()
 BRANCH_TITLE = BR["b"]["title"] if BR else LANE
+# Identity signature stamped on EVERY post so a bad researcher is traceable to its exact model + size
+# (accountability, Admin 2026-09-15). Persona still parses from AGENT which stays at the front of the tag.
+SIG = f"{MODEL_NAME}·{MODEL_PARAMS}·band:{BAND}"
 OUTPUT_CONTRACT = (BR["tree"].get("output_contract") if BR else
     "Post a [FOR-ENGINE] candidate: proven floor, new hypothesis, an engine-runnable TEST, and the version it could advance.")
 
@@ -162,7 +168,7 @@ def main():
     node_i = 0
     node = SEED_NODES[0]; depth = 0; turn = 0
     dropped_streak = 0
-    cc_post(f"[RESEARCH {AGENT}] online · branch: {BRANCH_TITLE} · FORWARD mission (build past proven, feed engine).")
+    cc_post(f"[RESEARCH {AGENT} · {SIG}] online · branch: {BRANCH_TITLE} · FORWARD mission (build past proven, feed engine).")
     while time.time() < end:
         turn += 1
         msgs, since = cc_read(BOARD, since)
@@ -175,7 +181,7 @@ def main():
         if peer and turn % 2 == 0:
             try:
                 v = verify(peer)
-                cc_post(f"[VERIFY {AGENT}] {v}")
+                cc_post(f"[VERIFY {AGENT} · {SIG}] {v}")
                 log("posted verify")
             except Exception as e:
                 log("verify error:", e)
@@ -189,7 +195,7 @@ def main():
                     depth = MAX_DEPTH  # force advance to a new node rather than grind a dead one
                 else:
                     label = node.get("id", "q") if isinstance(node, dict) else "q"
-                    cc_post(f"[RESEARCH {AGENT}] [{label}] [FOR-ENGINE]\n{finding}")
+                    cc_post(f"[RESEARCH {AGENT} · {SIG}] [{label}] [FOR-ENGINE]\n{finding}")
                     log(f"posted candidate (conf={conf}, depth={depth})")
                     dropped_streak = 0
                 depth += 1
@@ -205,11 +211,11 @@ def main():
                         node = nxt.strip().split("\n")[0][:220]
                     depth = 0
                     lab = node.get("id","next") if isinstance(node, dict) else "next"
-                    cc_post(f"[NEXT {AGENT}] [{lab}] " + (node.get("frontier", "") if isinstance(node, dict) else node)[:220])
+                    cc_post(f"[NEXT {AGENT} · {SIG}] [{lab}] " + (node.get("frontier", "") if isinstance(node, dict) else node)[:220])
             except Exception as e:
                 log("study error:", e); time.sleep(15)
         time.sleep(8)
-    cc_post(f"[RESEARCH {AGENT}] window done · branch {BRANCH_TITLE} · sleeping until the next spin.")
+    cc_post(f"[RESEARCH {AGENT} · {SIG}] window done · branch {BRANCH_TITLE} · sleeping until the next spin.")
     log("window complete")
 
 if __name__ == "__main__":

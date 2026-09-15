@@ -24,6 +24,8 @@ Env (from the workflow):
 """
 import os, sys, json, time, urllib.request, urllib.parse, random
 
+TREE_URL  = os.environ.get("TREE_URL", "").rstrip("/")  # improvement_tree.json (public build repo)
+BRANCH    = os.environ.get("BRANCH", "")                # which tree branch this agent owns (by key)
 CC_BASE   = os.environ.get("CC_BASE", "").rstrip("/")
 CC_TOKEN  = os.environ.get("CC_AGENT_TOKEN", "")
 AGENT     = os.environ.get("AGENT", "research-agent")
@@ -79,32 +81,73 @@ def ask(system, user, max_tokens=700, temperature=0.5):
         d = json.loads(r.read().decode())
     return (d["choices"][0]["message"]["content"] or "").strip()
 
-# ---- the study / verify turns (a mini self-improve: draft -> critique -> refine) ----
-SYS = (f"You are {AGENT}, a research agent in the Bull4Life fleet. Lane: {LANE}. "
-       "Be concrete and honest. If a claim is weak or unproven, say so. Never fabricate results. "
-       "Prefer measured, falsifiable statements over vibes.")
+# ---- the improvement tree (the forward mission: build PAST proven, never re-derive it) ----
+def load_branch():
+    """Fetch improvement_tree.json and return this agent's branch (by BRANCH key, else persona match)."""
+    if not TREE_URL:
+        return None
+    try:
+        req = urllib.request.Request(TREE_URL, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            tree = json.loads(r.read().decode())
+    except Exception as e:
+        log("tree fetch failed:", e); return None
+    persona = AGENT.split("-")[1] if AGENT.count("-") >= 1 else ""
+    for b in tree.get("branches", []):
+        if BRANCH and b.get("key") == BRANCH: return {"tree": tree, "b": b}
+        if not BRANCH and b.get("persona") == persona: return {"tree": tree, "b": b}
+    # fall back to the first branch so the agent still runs on-mission
+    bl = tree.get("branches", [])
+    return {"tree": tree, "b": bl[0]} if bl else None
 
-def study(question):
-    draft = ask(SYS, f"Study this question and give your best current finding:\n\n{question}\n\n"
-                     "Answer in <=150 words: the finding, the mechanism/why, and one concrete way to TEST it.")
-    crit  = ask(SYS, f"Here is a draft finding:\n\n{draft}\n\nAdversarially critique it in <=80 words: "
-                     "what's the weakest claim, and is it fitted/overclaimed?")
-    final = ask(SYS, f"Question: {question}\nDraft: {draft}\nCritique: {crit}\n\n"
-                     "Give the REFINED finding in <=150 words, keeping only what survives the critique. "
-                     "End with 'CONFIDENCE: low|medium|high' and 'TEST: <one concrete check>'.")
+BR = load_branch()
+BRANCH_TITLE = BR["b"]["title"] if BR else LANE
+OUTPUT_CONTRACT = (BR["tree"].get("output_contract") if BR else
+    "Post a [FOR-ENGINE] candidate: proven floor, new hypothesis, an engine-runnable TEST, and the version it could advance.")
+
+# The mission is FORWARD: every finding builds PAST a proven fleet result toward something engine has NOT
+# tested. Re-deriving or restating a settled law is useless spam and must be dropped, not posted.
+SYS = (f"You are {AGENT}, a research agent in the Bull4Life trading fleet, on the '{BRANCH_TITLE}' branch. "
+       "Your job is NOT to re-prove what the fleet already knows -- the strategy, the bot and the indicator "
+       "have been proven many times; re-deriving a settled result is useless spam. Your job is to build PAST "
+       "a proven finding toward the NEXT step ENGINE can TEST and fold into a version bump. Be concrete and "
+       "honest; if a candidate is weak or just a restatement, SAY SO and drop it. Never fabricate. "
+       f"Output contract: {OUTPUT_CONTRACT}")
+
+def study(node):
+    """node = a branch seed/frontier dict {proven, frontier} OR a plain question string for advanced threads."""
+    if isinstance(node, dict):
+        proven = node.get("proven", ""); frontier = node.get("frontier", node.get("q", ""))
+        head = (f"PROVEN FLOOR (settled -- do NOT re-derive this):\n{proven}\n\n"
+                f"FRONTIER (produce this):\n{frontier}")
+    else:
+        head = f"Forward question (build past what is proven, do not restate it):\n{node}"
+    draft = ask(SYS, f"{head}\n\nGive your best FORWARD candidate in <=170 words: the new hypothesis/method "
+                     "(not the proven floor restated), the mechanism, and one concrete TEST engine can run on "
+                     "real data/backtests with an expected result.")
+    crit  = ask(SYS, f"Here is a candidate:\n\n{draft}\n\nAdversarially critique it in <=90 words: is it just a "
+                     "RESTATEMENT of the proven floor? Is the test actually runnable? Would a pass really advance "
+                     "a version? If it fails any of these, say DROP and why.")
+    final = ask(SYS, f"{head}\nCandidate: {draft}\nCritique: {crit}\n\nIf the critique said DROP, reply exactly "
+                     "'DROP: <one line why>'. Otherwise give the REFINED [FOR-ENGINE] candidate in <=170 words as: "
+                     "FLOOR: <proven basis> / HYPOTHESIS: <the new thing> / TEST: <engine-runnable check + expected "
+                     "result> / ADVANCES: <which version and how>. End with 'CONFIDENCE: low|medium|high'.")
     conf = "low"
     for c in ("high", "medium", "low"):
-        if f"CONFIDENCE: {c}" in final.lower() or f"confidence: {c}" in final.lower(): conf = c; break
-    return final, conf
+        if f"confidence: {c}" in final.lower(): conf = c; break
+    dropped = final.strip().upper().startswith("DROP")
+    return final, conf, dropped
 
 def verify(peer_text):
-    return ask(SYS, f"A peer agent posted this finding:\n\n{peer_text[:1500]}\n\n"
-                    "Adversarially verify it in <=100 words. Try to REFUTE it. Verdict: HOLDS or REFUTED, and why. "
-                    "Default to REFUTED if the evidence is thin or the breadth is a coin-flip.")
+    return ask(SYS, f"A peer posted this [FOR-ENGINE] candidate:\n\n{peer_text[:1500]}\n\n"
+                    "Adversarially verify it in <=110 words. FIRST decide: is it FORWARD (a new testable step) or "
+                    "just a RESTATEMENT of something already proven? A restatement is REFUTED automatically. "
+                    "Then: is the TEST engine-runnable and would a pass advance a version? Verdict: HOLDS or REFUTED, "
+                    "and why. Default REFUTED when thin, vague, or not actually new.")
 
-SEED_QUESTIONS = [
-    f"What is the single highest-leverage open question in '{LANE}' right now, and a first answer?",
-]
+# Seed the loop from THIS branch's forward nodes (proven floor -> frontier), not a generic lane question.
+SEED_NODES = (BR["b"]["seed_nodes"] if BR else
+              [f"What is one FORWARD, engine-testable step in '{LANE}' that builds past a proven result?"])
 
 def main():
     log(f"start · lane='{LANE}' · model={MODEL_URL} · window={WINDOW}s · board={BOARD}")
@@ -116,15 +159,17 @@ def main():
             time.sleep(10)
     end = time.time() + WINDOW - MARGIN
     since = 0
-    thread = SEED_QUESTIONS[0]; depth = 0; turn = 0
-    cc_post(f"[RESEARCH {AGENT}] online · lane: {LANE} · joining the swarm board.")
+    node_i = 0
+    node = SEED_NODES[0]; depth = 0; turn = 0
+    dropped_streak = 0
+    cc_post(f"[RESEARCH {AGENT}] online · branch: {BRANCH_TITLE} · FORWARD mission (build past proven, feed engine).")
     while time.time() < end:
         turn += 1
         msgs, since = cc_read(BOARD, since)
         peer = None
         for m in reversed(msgs):
             b = m.get("body", "")
-            if "[RESEARCH " in b and AGENT not in b:  # a peer's finding, not our own
+            if "[RESEARCH " in b and AGENT not in b:  # a peer's candidate, not our own
                 peer = b; break
         # alternate: verify a peer when we have one, else study
         if peer and turn % 2 == 0:
@@ -136,20 +181,35 @@ def main():
                 log("verify error:", e)
         else:
             try:
-                finding, conf = study(thread)
-                cc_post(f"[RESEARCH {AGENT}] Q: {thread[:120]}\n{finding}")
-                log(f"posted study (conf={conf}, depth={depth})")
+                finding, conf, dropped = study(node)
+                if dropped:
+                    # a self-dropped candidate is NOT posted -- that is the anti-spam gate working.
+                    log(f"self-DROPPED (no useless post); {finding[:80]}")
+                    dropped_streak += 1
+                    depth = MAX_DEPTH  # force advance to a new node rather than grind a dead one
+                else:
+                    label = node.get("id", "q") if isinstance(node, dict) else "q"
+                    cc_post(f"[RESEARCH {AGENT}] [{label}] [FOR-ENGINE]\n{finding}")
+                    log(f"posted candidate (conf={conf}, depth={depth})")
+                    dropped_streak = 0
                 depth += 1
                 if conf == "high" or depth >= MAX_DEPTH:
-                    # ADVANCE (proven or capped) -> next question from a peer thread or a fresh angle
-                    nxt = ask(SYS, f"Given the finished thread '{thread}', propose ONE sharper NEXT question "
-                                   f"in lane '{LANE}'. Reply with only the question.")
-                    thread = nxt.strip().split("\n")[0][:200] or SEED_QUESTIONS[0]; depth = 0
-                    cc_post(f"[NEXT {AGENT}] {thread}")
+                    # ADVANCE: next branch node, or (nodes exhausted) ask for a sharper FORWARD child
+                    node_i += 1
+                    if node_i < len(SEED_NODES):
+                        node = SEED_NODES[node_i]
+                    else:
+                        floor = node.get("frontier","") if isinstance(node, dict) else str(node)
+                        nxt = ask(SYS, f"We just worked: {floor[:200]}\nPropose ONE sharper FORWARD child question "
+                                       f"on the '{BRANCH_TITLE}' branch that engine has NOT tested. Only the question.")
+                        node = nxt.strip().split("\n")[0][:220]
+                    depth = 0
+                    lab = node.get("id","next") if isinstance(node, dict) else "next"
+                    cc_post(f"[NEXT {AGENT}] [{lab}] " + (node.get("frontier", "") if isinstance(node, dict) else node)[:220])
             except Exception as e:
                 log("study error:", e); time.sleep(15)
         time.sleep(8)
-    cc_post(f"[RESEARCH {AGENT}] window done · sleeping until the next spin.")
+    cc_post(f"[RESEARCH {AGENT}] window done · branch {BRANCH_TITLE} · sleeping until the next spin.")
     log("window complete")
 
 if __name__ == "__main__":

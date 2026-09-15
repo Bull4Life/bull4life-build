@@ -4,18 +4,78 @@
   "owner": "engine",
   "purpose": "The research fleet's report card + the engine->agent FEEDBACK signal. engine curates the swarm's [FOR-ENGINE] candidates and records a verdict per candidate here; that (a) updates each agent's running hit-rate so a bad researcher is visible and swappable, and (b) is read back by the agents so the loop LEARNS what engine actually values (candidates like the FOLDED ones, not the REJECTED ones). Runners fetch this at startup (read-only, public raw URL); engine writes it via tools/engine_feedback.py.",
   "verdicts": {
-    "QUEUED":   "a real, testable candidate -- engine will run it (counts as a hit)",
-    "FOLDED":   "engine ran the test and it PASSED -> folded into a version (the best outcome)",
-    "PARKED":   "plausible but not now (no version path yet / needs data engine lacks)",
+    "QUEUED": "a real, testable candidate -- engine will run it (counts as a hit)",
+    "FOLDED": "engine ran the test and it PASSED -> folded into a version (the best outcome)",
+    "PARKED": "plausible but not now (no version path yet / needs data engine lacks)",
     "REJECTED": "re-derivation, untestable, or wrong -- the anti-spam signal"
   },
   "hit_rate_def": "hit_rate = (queued + folded) / posted -- the share of an agent's posts that were worth engine's time. Master's KPI: is this RISING week over week?",
   "agents": {
-    "reason":  {"model": "Qwen3-8B",       "params": "8B",  "band": "M",  "branch": "indicator-next", "posted": 0, "queued": 0, "folded": 0, "parked": 0, "rejected": 0, "hit_rate": null, "note": "new"},
-    "verify":  {"model": "Qwen3-14B",      "params": "14B", "band": "L",  "branch": "overfit-proof",  "posted": 0, "queued": 0, "folded": 0, "parked": 0, "rejected": 0, "hit_rate": null, "note": "new"},
-    "broad":   {"model": "gemma-2-9b-it",  "params": "9B",  "band": "M+", "branch": "adaptation",     "posted": 0, "queued": 0, "folded": 0, "parked": 0, "rejected": 0, "hit_rate": null, "note": "new"},
-    "tooluse": {"model": "Llama-3.1-8B",   "params": "8B",  "band": "M",  "branch": "method-scout",   "posted": 0, "queued": 0, "folded": 0, "parked": 0, "rejected": 0, "hit_rate": null, "note": "new"},
-    "logic":   {"model": "DeepSeek-R1-7B", "params": "7B",  "band": "M",  "branch": "loop-evolve",    "posted": 0, "queued": 0, "folded": 0, "parked": 0, "rejected": 0, "hit_rate": null, "note": "new"}
+    "reason": {
+      "model": "Qwen3-8B",
+      "params": "8B",
+      "band": "M",
+      "branch": "indicator-next",
+      "posted": 0,
+      "queued": 0,
+      "folded": 0,
+      "parked": 0,
+      "rejected": 0,
+      "hit_rate": null,
+      "note": "new"
+    },
+    "verify": {
+      "model": "Qwen3-14B",
+      "params": "14B",
+      "band": "L",
+      "branch": "overfit-proof",
+      "posted": 0,
+      "queued": 0,
+      "folded": 0,
+      "parked": 0,
+      "rejected": 0,
+      "hit_rate": null,
+      "note": "new"
+    },
+    "broad": {
+      "model": "gemma-2-9b-it",
+      "params": "9B",
+      "band": "M+",
+      "branch": "adaptation",
+      "posted": 0,
+      "queued": 0,
+      "folded": 0,
+      "parked": 0,
+      "rejected": 0,
+      "hit_rate": null,
+      "note": "new"
+    },
+    "tooluse": {
+      "model": "Llama-3.1-8B",
+      "params": "8B",
+      "band": "M",
+      "branch": "method-scout",
+      "posted": 0,
+      "queued": 0,
+      "folded": 0,
+      "parked": 0,
+      "rejected": 0,
+      "hit_rate": null,
+      "note": "new"
+    },
+    "logic": {
+      "model": "DeepSeek-R1-7B",
+      "params": "7B",
+      "band": "M",
+      "branch": "loop-evolve",
+      "posted": 0,
+      "queued": 0,
+      "folded": 0,
+      "parked": 0,
+      "rejected": 0,
+      "hit_rate": null,
+      "note": "new"
+    }
   },
   "feedback": []
 }

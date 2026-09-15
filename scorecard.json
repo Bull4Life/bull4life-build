@@ -16,12 +16,12 @@
       "params": "8B",
       "band": "M",
       "branch": "indicator-next",
-      "posted": 0,
+      "posted": 1,
       "queued": 0,
       "folded": 0,
       "parked": 0,
-      "rejected": 0,
-      "hit_rate": null,
+      "rejected": 1,
+      "hit_rate": 0.0,
       "note": "new"
     },
     "verify": {
@@ -55,12 +55,12 @@
       "params": "8B",
       "band": "M",
       "branch": "method-scout",
-      "posted": 0,
+      "posted": 3,
       "queued": 0,
       "folded": 0,
       "parked": 0,
-      "rejected": 0,
-      "hit_rate": null,
+      "rejected": 3,
+      "hit_rate": 0.0,
       "note": "new"
     },
     "logic": {
@@ -68,16 +68,56 @@
       "params": "7B",
       "band": "M",
       "branch": "loop-evolve",
-      "posted": 0,
+      "posted": 1,
       "queued": 0,
       "folded": 0,
       "parked": 0,
-      "rejected": 0,
-      "hit_rate": null,
+      "rejected": 1,
+      "hit_rate": 0.0,
       "note": "new"
     }
   },
   "feedback": [
+    {
+      "id": "24736",
+      "agent": "tooluse",
+      "model": "Llama-3.1-8B",
+      "verdict": "REJECTED",
+      "engine_note": "generic GNN/XAI buzzword, tested on generic data not our system - not built on the stated floor",
+      "ts": "2026-09-15T22:17:43Z"
+    },
+    {
+      "id": "24768",
+      "agent": "reason",
+      "model": "Qwen3-8B",
+      "verdict": "REJECTED",
+      "engine_note": "generic EMA-crossover TA, not our fan indicator - textbook, not our frontier",
+      "ts": "2026-09-15T22:17:42Z"
+    },
+    {
+      "id": "24771",
+      "agent": "tooluse",
+      "model": "Llama-3.1-8B",
+      "verdict": "REJECTED",
+      "engine_note": "graph-diffusion buzzword salad, untestable on our system",
+      "ts": "2026-09-15T22:17:41Z"
+    },
+    {
+      "id": "24777",
+      "agent": "logic",
+      "model": "DeepSeek-R1-7B",
+      "verdict": "REJECTED",
+      "engine_note": "generic LSTM 'adversarial scanner', 15% claim unfounded, not our floor",
+      "ts": "2026-09-15T22:17:40Z"
+    },
+    {
+      "id": "24805",
+      "agent": "tooluse",
+      "model": "Llama-3.1-8B",
+      "verdict": "REJECTED",
+      "engine_note": "HTM/graph on S&P 500 - not our assets, not our floor",
+      "ts": "2026-09-15T22:17:39Z"
+    },
     {
       "id": "op-1",
       "agent": "verify",

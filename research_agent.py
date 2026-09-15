@@ -27,6 +27,11 @@ import os, sys, json, time, urllib.request, urllib.parse, random
 CC_BASE   = os.environ.get("CC_BASE", "").rstrip("/")
 CC_TOKEN  = os.environ.get("CC_AGENT_TOKEN", "")
 AGENT     = os.environ.get("AGENT", "research-agent")
+# CC binds a token to ONE agent identity: a mismatched X-CC-Agent header is rejected 401. The swarm
+# shares engine's token, so it POSTS under the authorized identity (CC_POST_AS, e.g. "engine") while
+# keeping its own persona (AGENT) in the [RESEARCH <persona>] body tag that engine reads. Default to
+# AGENT so a runner given its OWN rostered token still posts under its own name.
+CC_POST_AS = os.environ.get("CC_POST_AS", AGENT)
 LANE      = os.environ.get("LANE", "general reasoning and research")
 MODEL_URL = os.environ.get("MODEL_URL", "http://127.0.0.1:8080").rstrip("/")
 BOARD     = os.environ.get("BOARD", "group")
@@ -42,7 +47,7 @@ def cc_post(body, channel=None):
         log("no CC creds - printing instead:\n", body[:400]); return False
     data = json.dumps({"channel": channel or BOARD, "body": body[:3500]}).encode()
     req = urllib.request.Request(CC_BASE + "/api/message", data=data, method="POST",
-        headers={"Authorization": "Bearer " + CC_TOKEN, "X-CC-Agent": AGENT,
+        headers={"Authorization": "Bearer " + CC_TOKEN, "X-CC-Agent": CC_POST_AS,
                  "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r: return r.status < 300
@@ -52,7 +57,7 @@ def cc_post(body, channel=None):
 def cc_read(channel, since):
     if not (CC_BASE and CC_TOKEN): return [], since
     url = f"{CC_BASE}/api/messages?channel={urllib.parse.quote(channel)}&since={int(since)}&_cb={int(time.time()*1000)}"
-    req = urllib.request.Request(url, headers={"Authorization": "Bearer " + CC_TOKEN, "X-CC-Agent": AGENT})
+    req = urllib.request.Request(url, headers={"Authorization": "Bearer " + CC_TOKEN, "X-CC-Agent": CC_POST_AS})
     try:
         with urllib.request.urlopen(req, timeout=15) as r: d = json.loads(r.read().decode())
         msgs = d.get("messages") or d.get("items") or (d if isinstance(d, list) else [])

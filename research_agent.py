@@ -25,6 +25,7 @@ Env (from the workflow):
 import os, sys, json, time, urllib.request, urllib.parse, random
 
 TREE_URL  = os.environ.get("TREE_URL", "").rstrip("/")  # improvement_tree.json (public build repo)
+SCORE_URL = os.environ.get("SCORE_URL", "").rstrip("/")  # scorecard.json (engine's feedback + hit-rates)
 BRANCH    = os.environ.get("BRANCH", "")                # which tree branch this agent owns (by key)
 MODEL_NAME= os.environ.get("MODEL_NAME", "?")           # e.g. Qwen3-14B (accountability: who produced this)
 MODEL_PARAMS=os.environ.get("MODEL_PARAMS", "?B")       # e.g. 14B  (size -> difficulty band)
@@ -103,6 +104,18 @@ def load_branch():
     bl = tree.get("branches", [])
     return {"tree": tree, "b": bl[0]} if bl else None
 
+PERSONA = AGENT.split("-")[1] if AGENT.count("-") >= 1 else AGENT
+
+def load_scorecard():
+    """Fetch engine's scorecard -> this agent's own track record + note (so it knows how it's doing)."""
+    if not SCORE_URL: return None
+    try:
+        req = urllib.request.Request(SCORE_URL, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(req, timeout=15) as r: card = json.loads(r.read().decode())
+        return card.get("agents", {}).get(PERSONA)
+    except Exception as e:
+        log("scorecard fetch failed:", e); return None
+
 BR = load_branch()
 BRANCH_TITLE = BR["b"]["title"] if BR else LANE
 # Identity signature stamped on EVERY post so a bad researcher is traceable to its exact model + size
@@ -113,21 +126,33 @@ OUTPUT_CONTRACT = (BR["tree"].get("output_contract") if BR else
 
 # The mission is FORWARD: every finding builds PAST a proven fleet result toward something engine has NOT
 # tested. Re-deriving or restating a settled law is useless spam and must be dropped, not posted.
+MYSCORE = load_scorecard()
+SCORE_LINE = ""
+if MYSCORE and MYSCORE.get("posted"):
+    SCORE_LINE = (f" Your track record so far: {MYSCORE.get('queued',0)+MYSCORE.get('folded',0)}/"
+                  f"{MYSCORE['posted']} posts were useful to engine (hit-rate {MYSCORE.get('hit_rate')}), "
+                  f"{MYSCORE.get('rejected',0)} rejected as re-derivation/untestable. Raise that hit-rate: "
+                  "more of what engine QUEUES/FOLDS, none of what it REJECTS.")
+
 SYS = (f"You are {AGENT}, a research agent in the Bull4Life trading fleet, on the '{BRANCH_TITLE}' branch. "
        "Your job is NOT to re-prove what the fleet already knows -- the strategy, the bot and the indicator "
        "have been proven many times; re-deriving a settled result is useless spam. Your job is to build PAST "
        "a proven finding toward the NEXT step ENGINE can TEST and fold into a version bump. Be concrete and "
        "honest; if a candidate is weak or just a restatement, SAY SO and drop it. Never fabricate. "
-       f"Output contract: {OUTPUT_CONTRACT}")
+       f"Output contract: {OUTPUT_CONTRACT}{SCORE_LINE}")
 
-def study(node):
-    """node = a branch seed/frontier dict {proven, frontier} OR a plain question string for advanced threads."""
+def study(node, guidance=""):
+    """node = a branch seed/frontier dict {proven, frontier} OR a plain question string for advanced threads.
+    guidance = recent [ENGINE-FEEDBACK] the agent should steer by (learn what engine values)."""
     if isinstance(node, dict):
         proven = node.get("proven", ""); frontier = node.get("frontier", node.get("q", ""))
         head = (f"PROVEN FLOOR (settled -- do NOT re-derive this):\n{proven}\n\n"
                 f"FRONTIER (produce this):\n{frontier}")
     else:
         head = f"Forward question (build past what is proven, do not restate it):\n{node}"
+    if guidance:
+        head += (f"\n\nENGINE'S RECENT FEEDBACK TO YOU (steer by this -- do more of what engine QUEUED/FOLDED, "
+                 f"avoid what it REJECTED):\n{guidance[:600]}")
     draft = ask(SYS, f"{head}\n\nGive your best FORWARD candidate in <=170 words: the new hypothesis/method "
                      "(not the proven floor restated), the mechanism, and one concrete TEST engine can run on "
                      "real data/backtests with an expected result.")
@@ -168,15 +193,21 @@ def main():
     node_i = 0
     node = SEED_NODES[0]; depth = 0; turn = 0
     dropped_streak = 0
-    cc_post(f"[RESEARCH {AGENT} · {SIG}] online · branch: {BRANCH_TITLE} · FORWARD mission (build past proven, feed engine).")
+    guidance = ""  # latest engine feedback addressed to this agent's persona
+    hr = MYSCORE.get("hit_rate") if MYSCORE else None
+    cc_post(f"[RESEARCH {AGENT} · {SIG}] online · branch: {BRANCH_TITLE} · FORWARD mission"
+            + (f" · hit-rate {hr}" if hr is not None else "") + ".")
     while time.time() < end:
         turn += 1
         msgs, since = cc_read(BOARD, since)
         peer = None
-        for m in reversed(msgs):
+        for m in reversed(msgs):  # newest first
             b = m.get("body", "")
-            if "[RESEARCH " in b and AGENT not in b:  # a peer's candidate, not our own
-                peer = b; break
+            # engine feedback addressed to us (or the whole board) -> steer the next study
+            if "[ENGINE-FEEDBACK" in b and (f"@{PERSONA}" in b or "@all" in b):
+                guidance = (b + "\n" + guidance)[:900]
+            if peer is None and "[RESEARCH " in b and AGENT not in b:  # newest peer candidate, not our own
+                peer = b
         # alternate: verify a peer when we have one, else study
         if peer and turn % 2 == 0:
             try:
@@ -187,7 +218,7 @@ def main():
                 log("verify error:", e)
         else:
             try:
-                finding, conf, dropped = study(node)
+                finding, conf, dropped = study(node, guidance)
                 if dropped:
                     # a self-dropped candidate is NOT posted -- that is the anti-spam gate working.
                     log(f"self-DROPPED (no useless post); {finding[:80]}")

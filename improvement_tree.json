@@ -1,0 +1,78 @@
+{
+  "version": "2.0.0",
+  "updated": "2026-09-15",
+  "owner": "engine",
+  "mission": "Produce NEW, verified knowledge that lets ENGINE evolve -- the indicator to its next version, the strategy and the research loop itself -- as time passes. FORWARD, never backward. Admin directive 2026-09-15: do NOT re-chew what is already proven (bot, strategy, indicator have been proven many times). Re-deriving a settled law is useless spam. Every study must take a PROVEN finding as its floor and produce the NEXT step engine can TEST and fold into a version bump. The agents are hypothesis-GENERATORS + synthesizers feeding engine's evolution; engine tests candidates on real data and the good ones advance the fleet. Output is a ranked queue of 'things engine should test next', not conclusions.",
+  "output_contract": "Each finding is a CANDIDATE FOR ENGINE, tagged [FOR-ENGINE], stating: (1) the proven floor it builds on, (2) the NEW hypothesis/method, (3) a concrete engine-runnable TEST + expected result, (4) why it could ADVANCE a version. Weak/re-derivation/off-lane candidates are dropped, not posted.",
+  "gates": {
+    "G1_FORWARD": "Builds PAST a proven finding toward something engine has NOT yet tested. Re-deriving or restating a settled result FAILS -- that is the useless-spam gate.",
+    "G2_TESTABLE": "Names a concrete test engine can run on real data/backtests, with an expected result, so a candidate can be proven or killed.",
+    "G3_VERIFIED": "Survived adversarial peer verification (>= majority HOLDS; default REFUTED when thin or when it is just a plausible-sounding restatement).",
+    "G4_ADVANCES": "If verified AND the test passes, it plausibly advances a fleet version (indicator fan-M.m.p, a strategy lever, or the research loop). No version-path = park it."
+  },
+  "tiers": [
+    {"id": 0, "name": "HYPOTHESIS","bar": "a forward candidate built on a proven floor"},
+    {"id": 1, "name": "TESTABLE",  "bar": "G2: a concrete engine-runnable test named"},
+    {"id": 2, "name": "VERIFIED",  "bar": "G3: survived adversarial peer verification"},
+    {"id": 3, "name": "QUEUED",    "bar": "handed to engine as a [FOR-ENGINE] test candidate"},
+    {"id": 4, "name": "FOLDED",    "bar": "engine ran the test; if it passed, folded into the next version -> new frontier opens"}
+  ],
+  "branches": [
+    {
+      "key": "indicator-next",
+      "title": "Indicator: next version",
+      "persona": "reason",
+      "owns": "forward hypotheses to push the fan indicator to its NEXT version",
+      "grounding_lane": "indicator",
+      "seed_nodes": [
+        {"id": "ix-1", "tier": 0, "proven": "The fan sp-path is 96-98% predetermined and every far-horizon anticipation lever is NO-SHIP; hold-to-cross is the current frontier.", "frontier": "Propose ONE new use of the (real but harmful-so-far) far-horizon signal that engine has NOT tested -- not entry/size/exit (all closed). What untried transform could make a predetermined path actionable?"},
+        {"id": "ix-2", "tier": 0, "proven": "Per-asset calibration is real on 13/22 slots but 'confidently wrong' on 3.", "frontier": "Propose a PRE-LIVE detector that flags a 'confidently wrong' calibration before it trades -- a test engine can run on the 22-slot holdout."}
+      ]
+    },
+    {
+      "key": "overfit-proof",
+      "title": "Proving edges with less data",
+      "persona": "verify",
+      "owns": "better verification so engine trusts a new edge with fewer slots/less time",
+      "grounding_lane": "hunter",
+      "seed_nodes": [
+        {"id": "op-1", "tier": 0, "proven": "Candidates die BELOW-MDE not on sign; we are short of RESOLUTION not edges; deflated-Sharpe + FDR gate today.", "frontier": "Propose a verification statistic that reaches significance with FEWER slots than deflated-Sharpe for the same false-discovery rate -- and the exact test to compare them on the fleet's own hof rows."},
+        {"id": "op-2", "tier": 0, "proven": "Sharpe-positive + breadth-coinflip = FITTED; breadth is the anti-overfit channel.", "frontier": "Propose a SINGLE combined statistic (breadth x capital-weight x ruin) that ranks candidates better than the current 3 separate gates -- testable on the equal-weight vs capital-weight books."}
+      ]
+    },
+    {
+      "key": "adaptation",
+      "title": "Evolve-as-we-go (regime adaptation)",
+      "persona": "broad",
+      "owns": "how the system adapts as the market changes over time",
+      "grounding_lane": "strategy",
+      "seed_nodes": [
+        {"id": "ad-1", "tier": 0, "proven": "The fleet REFINES a seed each weekly clean-slate; hunt-from-0 breaks prod; rungs at swept lows have no edge.", "frontier": "Propose a mechanism that lets the weekly refine ADAPT to a detected regime shift without a full re-hunt -- and how engine would A/B it against the static refine."},
+        {"id": "ad-2", "tier": 0, "proven": "Deterministic signals clear MDE where predicted signals can't (power is the constraint).", "frontier": "Propose ONE new deterministic (non-predicted) signal family engine has not mined, with the exact data it needs and the test to see if it clears MDE."}
+      ]
+    },
+    {
+      "key": "method-scout",
+      "title": "New methods to adopt",
+      "persona": "tooluse",
+      "owns": "surface external techniques the fleet could adopt; flag what needs real verification",
+      "grounding_lane": "compute",
+      "seed_nodes": [
+        {"id": "ms-1", "tier": 0, "proven": "The fleet has a 152-tool verified library + ADOPT-NOW picks; box agents have NO web/HF so 'newest X' lookups HALLUCINATE (all 10 HF repos 401).", "frontier": "From what you ALREADY know (no fabrication), name ONE concrete technique the fleet likely lacks for a named lane, with a self-check: state your confidence it is real and EXACTLY what engine must HF/web-verify before trusting it."},
+        {"id": "ms-2", "tier": 0, "proven": "Flash 4.1 handles deep reasoning cheaply; the swarm does volume.", "frontier": "Propose a division-of-labor rule for WHICH candidate types the small swarm should generate vs escalate to Flash -- so the loop spends the expensive model only where it pays."}
+      ]
+    },
+    {
+      "key": "loop-evolve",
+      "title": "Research loop self-improvement (META)",
+      "persona": "logic",
+      "owns": "how the agents + hermes measurably get better each cycle",
+      "grounding_lane": "compute",
+      "seed_nodes": [
+        {"id": "le-1", "tier": 0, "proven": "The swarm was 'busy but drifting' -- 146 posts of off-lane academia -- because it seeded from generic lanes. This tree re-seeds it forward.", "frontier": "Propose the SINGLE most reliable per-finding self-check a small model can run to decide 'this advances engine' vs 'this is a plausible restatement' -- and how to measure, over a week, whether the loop's useful-candidate rate is RISING."},
+        {"id": "le-2", "tier": 0, "proven": "hermes accrues learned skills on a Star Map / Memory Graph but has learned nothing yet.", "frontier": "Propose what a hermes 'learned skill' should BE for this fleet (a reusable research move that raised the candidate-hit-rate), and the promotion rule that adds it to the map -- so hermes visibly evolves cycle over cycle."}
+      ]
+    }
+  ],
+  "frontier_note": "These Tier-0 nodes are FORWARD hypotheses on a proven floor. As a candidate verifies and engine folds its test result into a version, engine appends the deeper child frontier it opened. Empty upper tiers = the loop has not yet EARNED that depth. The tree evolves as engine and the agents evolve -- that is the whole point."
+}

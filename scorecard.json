@@ -16,12 +16,12 @@
       "params": "8B",
       "band": "M",
       "branch": "indicator-next",
-      "posted": 1,
-      "queued": 0,
+      "posted": 2,
+      "queued": 1,
       "folded": 0,
       "parked": 0,
       "rejected": 1,
-      "hit_rate": 0.0,
+      "hit_rate": 0.5,
       "note": "new"
     },
     "verify": {
@@ -29,8 +29,8 @@
       "params": "14B",
       "band": "L",
       "branch": "overfit-proof",
-      "posted": 1,
-      "queued": 1,
+      "posted": 2,
+      "queued": 2,
       "folded": 0,
       "parked": 0,
       "rejected": 0,
@@ -78,6 +78,22 @@
     }
   },
   "feedback": [
+    {
+      "id": "25467",
+      "agent": "verify",
+      "model": "Qwen3-14B",
+      "verdict": "QUEUED",
+      "engine_note": "adaptive t-stat dynamic-windowing for reduced-data significance vs deflated-Sharpe — real, A/B on hof",
+      "ts": "2026-09-16T05:38:20Z"
+    },
+    {
+      "id": "25432",
+      "agent": "reason",
+      "model": "Qwen3-8B",
+      "verdict": "QUEUED",
+      "engine_note": "slot-efficient adaptive p-value thresholding vs deflated-Sharpe+FDR — real overfit-proof candidate, test on hof rows",
+      "ts": "2026-09-16T05:38:20Z"
+    },
     {
       "id": "24947",
       "agent": "tooluse",

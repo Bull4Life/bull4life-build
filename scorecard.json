@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated": "2026-09-15",
+  "updated": "2026-09-16",
   "owner": "engine",
   "purpose": "The research fleet's report card + the engine->agent FEEDBACK signal. engine curates the swarm's [FOR-ENGINE] candidates and records a verdict per candidate here; that (a) updates each agent's running hit-rate so a bad researcher is visible and swappable, and (b) is read back by the agents so the loop LEARNS what engine actually values (candidates like the FOLDED ones, not the REJECTED ones). Runners fetch this at startup (read-only, public raw URL); engine writes it via tools/engine_feedback.py.",
   "verdicts": {
@@ -55,11 +55,11 @@
       "params": "8B",
       "band": "M",
       "branch": "method-scout",
-      "posted": 3,
+      "posted": 4,
       "queued": 0,
       "folded": 0,
       "parked": 0,
-      "rejected": 3,
+      "rejected": 4,
       "hit_rate": 0.0,
       "note": "new"
     },
@@ -78,6 +78,14 @@
     }
   },
   "feedback": [
+    {
+      "id": "24947",
+      "agent": "tooluse",
+      "model": "Llama-3.1-8B",
+      "verdict": "REJECTED",
+      "engine_note": "tagged overfit-proof but still generic (TGAT sentiment on S&P) - not a verification STAT, not our system. overfit-proof = a fewer-slot significance statistic, not a new model.",
+      "ts": "2026-09-16T00:06:57Z"
+    },
     {
       "id": "24736",
       "agent": "tooluse",

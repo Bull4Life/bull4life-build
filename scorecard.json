@@ -29,8 +29,8 @@
       "params": "14B",
       "band": "L",
       "branch": "overfit-proof",
-      "posted": 2,
-      "queued": 2,
+      "posted": 3,
+      "queued": 3,
       "folded": 0,
       "parked": 0,
       "rejected": 0,
@@ -78,6 +78,14 @@
     }
   },
   "feedback": [
+    {
+      "id": "25675",
+      "agent": "verify",
+      "model": "Qwen3-14B",
+      "verdict": "QUEUED",
+      "engine_note": "adaptive t-stat dynamic-windowing + regime-aware thresholds — overfit-proof + adaptation crossover; A/B vs deflated-Sharpe on hof",
+      "ts": "2026-09-16T09:38:22Z"
+    },
     {
       "id": "25467",
       "agent": "verify",

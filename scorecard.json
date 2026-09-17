@@ -27,12 +27,12 @@
       "family": "Alibaba",
       "role": "Reasoner",
       "branch": "overfit-proof",
-      "posted": 2,
+      "posted": 3,
       "queued": 1,
       "folded": 0,
       "parked": 1,
-      "rejected": 0,
-      "hit_rate": 0.5,
+      "rejected": 1,
+      "hit_rate": 0.333,
       "note": "reasoning-fleet baseline"
     },
     "research-verify": {
@@ -97,6 +97,14 @@
     }
   },
   "feedback": [
+    {
+      "id": "28382",
+      "agent": "research-reason",
+      "model": "Qwen3-30B-A3B-Thinking",
+      "verdict": "REJECTED",
+      "engine_note": "'Dynamic RSI period by volatility regime' is on the DEAD list in your own brief (improvement_tree v2.2.0): generic TA on price + a lookback tweak. Both were measured dead on real money on 2026-09-17. Your branch's frontier is NEW DATA, not new price math - funding rate, open interest, liquidation prints, order-book imbalance. research-indicator already scored a QUEUE this week with funding rate. Read the DEAD list at the top of your branch before posting.",
+      "ts": "2026-09-17T23:28:30Z"
+    },
     {
       "id": "28263",
       "agent": "research-indicator",

@@ -27,12 +27,12 @@
       "family": "Alibaba",
       "role": "Reasoner",
       "branch": "overfit-proof",
-      "posted": 1,
+      "posted": 2,
       "queued": 1,
       "folded": 0,
-      "parked": 0,
+      "parked": 1,
       "rejected": 0,
-      "hit_rate": 1.0,
+      "hit_rate": 0.5,
       "note": "reasoning-fleet baseline"
     },
     "research-verify": {
@@ -42,12 +42,12 @@
       "family": "DeepSeek",
       "role": "Skeptic",
       "branch": "loop-evolve",
-      "posted": 0,
+      "posted": 1,
       "queued": 0,
       "folded": 0,
       "parked": 0,
-      "rejected": 0,
-      "hit_rate": null,
+      "rejected": 1,
+      "hit_rate": 0.0,
       "note": "reasoning-fleet baseline"
     },
     "research-broad": {
@@ -97,6 +97,22 @@
     }
   },
   "feedback": [
+    {
+      "id": "27276",
+      "agent": "research-verify",
+      "model": "DeepSeek-R1-14B",
+      "verdict": "REJECTED",
+      "engine_note": "Generic 'LSTM + financial indicators' - not our fan/WT/HLEV/Sweep system, not testable as stated on our hof. Textbook, not our frontier.",
+      "ts": "2026-09-17T09:40:37Z"
+    },
+    {
+      "id": "27242",
+      "agent": "research-reason",
+      "model": "Qwen3-30B-A3B-Thinking",
+      "verdict": "PARKED",
+      "engine_note": "Genuine, on-branch, testable (adaptive conviction weighting) - good candidate. But the conviction/signal-WEIGHT add-on class was just measured NEGATIVE on real money by the storm lane (opus5: 'no weight add-on pays'; fable: cloud-conviction CLOSED). Not re-run. Steer: propose levers OTHER than re-weighting existing signals (e.g. evidence-pooling / union-mode for rare-fire, sequential reads).",
+      "ts": "2026-09-17T09:40:36Z"
+    },
     {
       "id": "26622",
       "agent": "research-scout",

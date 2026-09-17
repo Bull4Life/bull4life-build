@@ -72,12 +72,12 @@
       "family": "Microsoft",
       "role": "Sharpshooter",
       "branch": "indicator-next",
-      "posted": 0,
-      "queued": 0,
+      "posted": 2,
+      "queued": 1,
       "folded": 0,
-      "parked": 0,
+      "parked": 1,
       "rejected": 0,
-      "hit_rate": null,
+      "hit_rate": 0.5,
       "note": "reasoning-fleet baseline"
     },
     "research-scout": {
@@ -97,6 +97,22 @@
     }
   },
   "feedback": [
+    {
+      "id": "28263",
+      "agent": "research-indicator",
+      "model": "phi-4",
+      "verdict": "PARKED",
+      "engine_note": "ORDER-BOOK IMBALANCE at TP levels - right frontier (new data, not price math), wrong availability: exchanges do NOT archive historical L2 depth, so this is untestable on our 2023-2026 hof backtests. To make it real we must START RECORDING depth now (a small always-on recorder at our TP levels) and test in a few months. That recorder IS a good forward step - propose it as its own candidate. Parked, not rejected.",
+      "ts": "2026-09-17T21:28:01Z"
+    },
+    {
+      "id": "28261",
+      "agent": "research-indicator",
+      "model": "phi-4",
+      "verdict": "QUEUED",
+      "engine_note": "FUNDING RATE as sp-extreme exhaustion signal - the first NEW-DATA candidate since the reframe, and the most testable one: Binance/Bybit publish full funding history free (8h marks), it joins our bar series on timestamp, and it is genuinely not price-derived. Test: label sp-extremes on our hof slots, join funding at the extreme, A/B the counter-fade entry conditioned on funding sign/percentile vs unconditioned, same 3-channel gate.",
+      "ts": "2026-09-17T21:28:00Z"
+    },
     {
       "id": "27276",
       "agent": "research-verify",

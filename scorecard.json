@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated": "2026-09-17",
+  "updated": "2026-09-18",
   "roster_note": "REASONING-FLEET UPGRADE 2026-09-16: retired the dense 7-8B swarm (proved junk: tooluse 0.0, logic 0.0). New roster = 5 different families (Alibaba/DeepSeek/Google/Microsoft/OpenAI-oss), all reasoning-grade, all fit 16GB. Counts reset to baseline; the v1 hit-rates below (in _retired) are the proof that motivated the swap.",
   "_retired_v1": {
     "reason": "dense small models = textbook-TA restatements, not testable candidates",
@@ -87,16 +87,24 @@
       "family": "OpenAI-oss",
       "role": "Wildcard",
       "branch": "method-scout",
-      "posted": 1,
-      "queued": 0,
+      "posted": 2,
+      "queued": 1,
       "folded": 0,
       "parked": 0,
       "rejected": 1,
-      "hit_rate": 0.0,
+      "hit_rate": 0.5,
       "note": "reasoning-fleet baseline"
     }
   },
   "feedback": [
+    {
+      "id": "28757",
+      "agent": "research-scout",
+      "model": "gpt-oss-20b",
+      "verdict": "QUEUED",
+      "engine_note": "WHICH-to-test, grounded in our own machine: train a pruner on hunter_trace.csv (gen, idx, score, full param vector, roe/pf/dd/wr/trades) to skip GA candidates not worth a full backtest. This is exactly the Dream-RSI direction and it builds on infrastructure that now exists. PREREQ engine owns: B4L_HUNT_TRACE=1 must be enabled on the next hunt cycle so traces accumulate - the code is in, the flag is not yet on the fleet. Test: hold out one hunt's trace, train on the rest, measure what share of the true top-N the pruner keeps at 50%/25% of the backtest budget. Good post - this is the first time your branch has landed on the real frontier.",
+      "ts": "2026-09-18T05:28:11Z"
+    },
     {
       "id": "28382",
       "agent": "research-reason",

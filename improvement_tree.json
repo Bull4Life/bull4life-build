@@ -1,186 +1,186 @@
 {
-  "version": "2.2.0",
-  "updated": "2026-09-17",
-  "owner": "engine",
-  "mission": "Produce NEW, verified knowledge that lets ENGINE evolve -- the indicator to its next version, the strategy and the research loop itself -- as time passes. FORWARD, never backward. Admin directive 2026-09-15: do NOT re-chew what is already proven (bot, strategy, indicator have been proven many times). Re-deriving a settled law is useless spam. Every study must take a PROVEN finding as its floor and produce the NEXT step engine can TEST and fold into a version bump. The agents are hypothesis-GENERATORS + synthesizers feeding engine's evolution; engine tests candidates on real data and the good ones advance the fleet. Output is a ranked queue of 'things engine should test next', not conclusions.",
-  "output_contract": "Each finding is a CANDIDATE FOR ENGINE, tagged [FOR-ENGINE], stating: (1) the proven floor it builds on, (2) the NEW hypothesis/method, (3) a concrete engine-runnable TEST + expected result, (4) why it could ADVANCE a version. Weak/re-derivation/off-lane candidates are dropped, not posted.",
-  "gates": {
-    "G1_FORWARD": "Builds PAST a proven finding toward something engine has NOT yet tested. Re-deriving or restating a settled result FAILS -- that is the useless-spam gate.",
-    "G2_TESTABLE": "Names a concrete test engine can run on real data/backtests, with an expected result, so a candidate can be proven or killed.",
-    "G3_VERIFIED": "Survived adversarial peer verification (>= majority HOLDS; default REFUTED when thin or when it is just a plausible-sounding restatement).",
-    "G4_ADVANCES": "If verified AND the test passes, it plausibly advances a fleet version (indicator fan-M.m.p, a strategy lever, or the research loop). No version-path = park it."
+ "version": "3.0.0",
+ "updated": "2026-09-23",
+ "owner": "engine",
+ "mission": "Engine is your lead. Work ONLY on the open question your branch owns - these are the questions engine is blocked on RIGHT NOW. A candidate is worth something only if engine can run it on the fleet this week and the result would change a decision. SYSTEM FACTS - use these, NEVER invent others (no 'v2.3 docs', no made-up bot rules): we trade CRYPTO PERPETUALS on Bybit - ADA, DOGE, ENA, NEAR, XRP - on 1m/3m/6m/9m/26m bars. Strategies: (1) WaveTrend COUNTER ladder (limit-order rungs that accumulate against the move, tiered adds, consolidation orders, rebuys; a GA hunts its parameters on a donated compute grid); (2) liquidity SWEEP; (3) HLEV, a rare high-leverage golden-gate scalp. Accounts follow the PUBLIC roadmap ladder: tier 0 = $250 trading + $250 safety, orders grow x1.25 per tier while capital grows x1.5-1.67, promote-only. Every test runs on OUR OHLCV candles and OUR backtest engine. Forex, stocks, indices and on-chain data are out of scope.",
+ "output_contract": "[FOR-ENGINE] candidate, <=170 words, EXACTLY these lines: TARGET: which asset/timeframe cells. CHANGE: the one thing to vary (a parameter family, a gate rule, a sizing rule) and its range. METRIC: what engine measures (survives from tier 0 Y/N, final equity, replay max drawdown, liquidations; for HLEV: mean return per trade, stop rate, trades per week). PASS: the number that counts as a win, stated BEFORE the test. WHY: the mechanism in one sentence. A candidate without a PASS number, tested on another market, or built on a fact not in SYSTEM FACTS, is dropped.",
+ "gates": {
+  "G1_FORWARD": "Builds PAST a proven finding toward something engine has NOT yet tested. Re-deriving or restating a settled result FAILS -- that is the useless-spam gate.",
+  "G2_TESTABLE": "Names a concrete test engine can run on real data/backtests, with an expected result, so a candidate can be proven or killed.",
+  "G3_VERIFIED": "Survived adversarial peer verification (>= majority HOLDS; default REFUTED when thin or when it is just a plausible-sounding restatement).",
+  "G4_ADVANCES": "If verified AND the test passes, it plausibly advances a fleet version (indicator fan-M.m.p, a strategy lever, or the research loop). No version-path = park it."
+ },
+ "tiers": [
+  {
+   "id": 0,
+   "name": "HYPOTHESIS",
+   "bar": "a forward candidate built on a proven floor"
   },
-  "tiers": [
-    {
-      "id": 0,
-      "name": "HYPOTHESIS",
-      "bar": "a forward candidate built on a proven floor"
-    },
-    {
-      "id": 1,
-      "name": "TESTABLE",
-      "bar": "G2: a concrete engine-runnable test named"
-    },
-    {
-      "id": 2,
-      "name": "VERIFIED",
-      "bar": "G3: survived adversarial peer verification"
-    },
-    {
-      "id": 3,
-      "name": "QUEUED",
-      "bar": "handed to engine as a [FOR-ENGINE] test candidate"
-    },
-    {
-      "id": 4,
-      "name": "FOLDED",
-      "bar": "engine ran the test; if it passed, folded into the next version -> new frontier opens"
-    }
-  ],
-  "branches": [
-    {
-      "key": "indicator-next",
-      "title": "Indicator: next version",
-      "persona": "reason",
-      "owns": "forward hypotheses to push the fan indicator to its NEXT version",
-      "grounding_lane": "indicator",
-      "seed_nodes": [
-        {
-          "id": "in-r1",
-          "tier": 0,
-          "proven": "The fan sp-path is 96-98% predetermined; every PRICE-derived add-on to it has now failed on money (4 layers closed).\n\nDEAD - auto-REJECT (measured on real money by engine's storm agents, 2026-09-17): generic TA on price (RSI/EMA/MACD lookbacks, ATR or trailing stops, volatility-scaled position sizing, Bollinger, LSTM/GNN/transformer price models, sentiment, 'memory graph' / 'learned patterns'); re-weighting our existing signals by conviction or confidence; adding sublayers / age-compounding / re-centering / cross-quality seeding to the fan; shrinkage or conditional significance lenses (bayes_sharpe, CFA) at our slot counts n<=24 - naive BH-FDR is at the ceiling. Proposing any of these again = REJECTED.",
-          "frontier": "NEW DATA, not new math on price. Name ONE input we do not use yet - funding rate, open interest, liquidation-cascade prints, or order-book imbalance at our TP levels - that could tell the counter-fade WHEN an sp-extreme is exhausted. Give the exact field, its free public source (Binance/Bybit REST), how it joins our bar series, and a test on our hof slots with a pass gate."
-        }
-      ],
-      "model": "Qwen3-8B",
-      "params": "8B",
-      "band": "M"
-    },
-    {
-      "key": "overfit-proof",
-      "title": "Proving edges with less data",
-      "persona": "verify",
-      "owns": "better verification so engine trusts a new edge with fewer slots/less time",
-      "grounding_lane": "hunter",
-      "seed_nodes": [
-        {
-          "id": "ov-r1",
-          "tier": 0,
-          "proven": "Per-slot significance CANNOT be raised at n<=24: naive BH-FDR beat bayes_sharpe 16/16 and CFA only wins at n>=30.\n\nDEAD - auto-REJECT (measured on real money by engine's storm agents, 2026-09-17): generic TA on price (RSI/EMA/MACD lookbacks, ATR or trailing stops, volatility-scaled position sizing, Bollinger, LSTM/GNN/transformer price models, sentiment, 'memory graph' / 'learned patterns'); re-weighting our existing signals by conviction or confidence; adding sublayers / age-compounding / re-centering / cross-quality seeding to the fan; shrinkage or conditional significance lenses (bayes_sharpe, CFA) at our slot counts n<=24 - naive BH-FDR is at the ceiling. Proposing any of these again = REJECTED.",
-          "frontier": "Raise EVIDENCE RATE instead of per-slot power. For rare-fire HLEV (~1.8 resolved trades/week) and Sweep, design a sequential read (SPRT or changepoint) or neighbour-config event pooling that reaches a ship/no-ship decision in fewer weeks with FDR controlled. Give the exact stop rules and a simulation plan with the null."
-        }
-      ],
-      "model": "Qwen3-14B",
-      "params": "14B",
-      "band": "L"
-    },
-    {
-      "key": "adaptation",
-      "title": "Evolve-as-we-go (regime adaptation)",
-      "persona": "broad",
-      "owns": "how the system adapts as the market changes over time",
-      "grounding_lane": "strategy",
-      "seed_nodes": [
-        {
-          "id": "ad-r1",
-          "tier": 0,
-          "proven": "The fleet REFINES a seed at each weekly clean-slate; most candidates die BELOW-MDE (short of resolution), not on sign.\n\nDEAD - auto-REJECT (measured on real money by engine's storm agents, 2026-09-17): generic TA on price (RSI/EMA/MACD lookbacks, ATR or trailing stops, volatility-scaled position sizing, Bollinger, LSTM/GNN/transformer price models, sentiment, 'memory graph' / 'learned patterns'); re-weighting our existing signals by conviction or confidence; adding sublayers / age-compounding / re-centering / cross-quality seeding to the fan; shrinkage or conditional significance lenses (bayes_sharpe, CFA) at our slot counts n<=24 - naive BH-FDR is at the ceiling. Proposing any of these again = REJECTED.",
-          "frontier": "CARRY-FORWARD. Design the weekly ledger rule for candidates that failed only on power: which to keep re-reading each clean-slate, how evidence accumulates across weeks without peeking bias, and when to retire one. Concrete rule + how engine audits it."
-        }
-      ],
-      "model": "gemma-2-9b-it",
-      "params": "9B",
-      "band": "M+"
-    },
-    {
-      "key": "method-scout",
-      "title": "New methods to adopt",
-      "persona": "tooluse",
-      "owns": "surface external techniques the fleet could adopt; flag what needs real verification",
-      "grounding_lane": "compute",
-      "seed_nodes": [
-        {
-          "id": "me-r1",
-          "tier": 0,
-          "proven": "The hunter now logs EVERY GA eval (B4L_HUNT_TRACE=1 -> hunter_trace.csv: gen, idx, score, all params, roe/pf/dd/wr/trades).\n\nDEAD - auto-REJECT (measured on real money by engine's storm agents, 2026-09-17): generic TA on price (RSI/EMA/MACD lookbacks, ATR or trailing stops, volatility-scaled position sizing, Bollinger, LSTM/GNN/transformer price models, sentiment, 'memory graph' / 'learned patterns'); re-weighting our existing signals by conviction or confidence; adding sublayers / age-compounding / re-centering / cross-quality seeding to the fan; shrinkage or conditional significance lenses (bayes_sharpe, CFA) at our slot counts n<=24 - naive BH-FDR is at the ceiling. Proposing any of these again = REJECTED.",
-          "frontier": "WHICH-to-test, not what-to-test. Using hunter_trace.csv, scout a method (Dream-RSI replay-simulator, successive halving, surrogate/Bayesian optimisation over traces) that ranks which GA candidates deserve a full backtest. Give the exact input columns, the algorithm, and the backtest budget saved on a GA of pop P x gens G."
-        }
-      ],
-      "model": "Llama-3.1-8B",
-      "params": "8B",
-      "band": "M"
-    },
-    {
-      "key": "loop-evolve",
-      "title": "Research loop self-improvement (META)",
-      "persona": "logic",
-      "owns": "how the agents + hermes measurably get better each cycle",
-      "grounding_lane": "compute",
-      "seed_nodes": [
-        {
-          "id": "lo-r1",
-          "tier": 0,
-          "proven": "The swarm's pass rate is ~0: nearly every post re-proposes a DEAD idea or generic TA.\n\nDEAD - auto-REJECT (measured on real money by engine's storm agents, 2026-09-17): generic TA on price (RSI/EMA/MACD lookbacks, ATR or trailing stops, volatility-scaled position sizing, Bollinger, LSTM/GNN/transformer price models, sentiment, 'memory graph' / 'learned patterns'); re-weighting our existing signals by conviction or confidence; adding sublayers / age-compounding / re-centering / cross-quality seeding to the fan; shrinkage or conditional significance lenses (bayes_sharpe, CFA) at our slot counts n<=24 - naive BH-FDR is at the ceiling. Proposing any of these again = REJECTED.",
-          "frontier": "A pre-post SELF-CHECK every agent runs before posting: match the hypothesis against the DEAD list and the last 30 REJECTED engine_notes in scorecard.json. Specify it exactly and estimate what hit-rate it would have produced on the last 100 posts."
-        }
-      ],
-      "model": "DeepSeek-R1-Distill-Qwen-7B",
-      "params": "7B",
-      "band": "M"
-    }
-  ],
-  "frontier_note": "2026-09-17 REFRAME: the price-math / fan-layer / few-slot-significance questions are EXHAUSTED (measured). Frontier = new data, evidence rate, carry-forward, which-to-test, and a self-check against the DEAD list.",
-  "rating": {
-    "scheme": "difficulty 1-10 (mirrors ~/agent_protocol/enqueue.py). Match task hardness to model size so nobody chews above or below their weight.",
-    "bands": {
-      "S (<=4B)": "1-3 digest / synthesize / simplest checks",
-      "M (7-8B)": "4-6 standard forward candidates",
-      "M+ (9B)": "4-7",
-      "L (>=14B)": "7-10 the hardest verification + statistics"
-    },
-    "rule": "an agent works nodes with difficulty <= its band ceiling; the hardest branch (overfit-proof statistics) goes to the 14B, the phone 4B does S-band digest/curation-lite."
+  {
+   "id": 1,
+   "name": "TESTABLE",
+   "bar": "G2: a concrete engine-runnable test named"
   },
-  "curator": {
-    "who": "hermes (laptop runtime) is the SENIOR agent over the swarm -- NOT one of the 5.",
-    "role": "reads the swarm's [FOR-ENGINE] candidates on the research board, ranks + de-dupes + synthesizes them into engine's actual TEST QUEUE, and accrues the winning research moves as learned skills on its Star Map / Memory Graph.",
-    "why": "connects the two engines: the swarm generates volume, hermes curates quality, engine tests + folds. This is the missing link (Admin 2026-09-15).",
-    "status": "designed; wiring next (hermes on laptop can curate without the phone)."
+  {
+   "id": 2,
+   "name": "VERIFIED",
+   "bar": "G3: survived adversarial peer verification"
   },
-  "roster": {
-    "indicator-next": {
-      "model": "Qwen3-8B",
-      "params": "8B",
-      "band": "M",
-      "d": 6,
-      "runtime": "research_agent.py (runner)"
-    },
-    "overfit-proof": {
-      "model": "Qwen3-14B",
-      "params": "14B",
-      "band": "L",
-      "d": 8,
-      "runtime": "research_agent.py (runner)"
-    },
-    "adaptation": {
-      "model": "gemma-2-9b-it",
-      "params": "9B",
-      "band": "M+",
-      "d": 7,
-      "runtime": "research_agent.py (runner)"
-    },
-    "method-scout": {
-      "model": "Llama-3.1-8B",
-      "params": "8B",
-      "band": "M",
-      "d": 5,
-      "runtime": "research_agent.py (runner)"
-    },
-    "loop-evolve": {
-      "model": "DeepSeek-R1-Distill-Qwen-7B",
-      "params": "7B",
-      "band": "M",
-      "d": 7,
-      "runtime": "research_agent.py (runner)"
-    }
+  {
+   "id": 3,
+   "name": "QUEUED",
+   "bar": "handed to engine as a [FOR-ENGINE] test candidate"
+  },
+  {
+   "id": 4,
+   "name": "FOLDED",
+   "bar": "engine ran the test; if it passed, folded into the next version -> new frontier opens"
   }
+ ],
+ "branches": [
+  {
+   "key": "indicator-next",
+   "title": "Indicator: next version",
+   "persona": "reason",
+   "owns": "forward hypotheses to push the fan indicator to its NEXT version",
+   "grounding_lane": "indicator",
+   "seed_nodes": [
+    {
+     "id": "in-v3-1",
+     "proven": "HLEV's entry gate (a rare extreme of the fan indicator: top tier, falling forecast, sp3 rank in the bottom 0.5% of a 2000-bar window) was tested on every timeframe: it WORKS on 3m (all 5 assets, 0 liquidations) and 1m (ENA, ADA, NEAR); on 6m it fires but no setting passes; on 9m it barely or never fires; on 26m it NEVER fires. The window and percentile are fixed in BARS, not in time. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Propose how the gate's rank window and percentile should SCALE with timeframe so it fires on 6m/9m/26m at a frequency comparable to 3m, and why the fired events would still be exhaustion rather than cascades. Give the exact scaling rule. PASS: on 6m and 9m it produces at least 15 resolved trades per asset with a positive mean return per trade and zero liquidations.",
+     "tier": 0
+    }
+   ],
+   "model": "Qwen3-8B",
+   "params": "8B",
+   "band": "M"
+  },
+  {
+   "key": "overfit-proof",
+   "title": "Proving edges with less data",
+   "persona": "verify",
+   "owns": "better verification so engine trusts a new edge with fewer slots/less time",
+   "grounding_lane": "hunter",
+   "seed_nodes": [
+    {
+     "id": "op-v3-1",
+     "proven": "Engine re-tested 38 WaveTrend configs under the roadmap order-size rule. Their OLD ranking barely predicts the new one (rank correlation 0.154; only 3 of the old top-10 stay top-10). OLD max drawdown does NOT protect: the config with the lowest old drawdown (15%) liquidated. 16 of 38 survive a customer's path from tier 0; 31 of 38 survive at tier 4. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Propose ONE statistic engine can compute from a config's EXISTING backtest (equity curve, fills, position path - at the OLD small order size) that predicts whether it SURVIVES a tier-0 start at 3-26x larger orders. Say exactly how to compute it and the threshold. PASS: it separates the 16 survivors from the 22 dead better than old max drawdown does (which fails).",
+     "tier": 0
+    }
+   ],
+   "model": "Qwen3-14B",
+   "params": "14B",
+   "band": "L"
+  },
+  {
+   "key": "adaptation",
+   "title": "Evolve-as-we-go (regime adaptation)",
+   "persona": "broad",
+   "owns": "how the system adapts as the market changes over time",
+   "grounding_lane": "strategy",
+   "seed_nodes": [
+    {
+     "id": "ad-v3-1",
+     "proven": "Under the roadmap order rule, from a tier-0 start: XRP survives 6 of 6 configs, DOGE 4/8, ADA 3/8, NEAR 3/8, ENA 0 of 8. At tier 4 ENA still loses 5 of 8. The rule is identical for every asset (lot x timeframe x 1.25^tier), so the difference is in the ASSET's price behaviour or in how its configs were tuned. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Name ONE measurable property of an asset's OHLCV bars (e.g. how far price travels past a rung before reverting, how often bars gap across several rungs, how long one-directional runs last - pick one and define it exactly) that is HIGH for ENA and LOW for XRP, and explain why it kills a counter ladder whose orders just got larger. PASS: the property ranks the five assets in the same order as their survival.",
+     "tier": 0
+    }
+   ],
+   "model": "gemma-2-9b-it",
+   "params": "9B",
+   "band": "M+"
+  },
+  {
+   "key": "method-scout",
+   "title": "New methods to adopt",
+   "persona": "tooluse",
+   "owns": "surface external techniques the fleet could adopt; flag what needs real verification",
+   "grounding_lane": "compute",
+   "seed_nodes": [
+    {
+     "id": "ms-v3-1",
+     "proven": "26-minute bars: 0 of 8 WaveTrend configs survive a tier-0 start under the roadmap rule, although several survive at tier 4. At tier 0 a 26m order is 26 lots, about 1-2% of the account per order; capital grows faster than orders per tier, so tier 0 is the riskiest point. 1m is already gated until tier 6 for a related reason (1 lot x 1.25 rounds back to 1 lot). DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Propose the rule for LONG timeframes: either a smaller tier-0 base for 26m (give the formula), or the lowest tier 26m should unlock at (like 1m unlocks at tier 6), with the arithmetic that justifies it. PASS: engine re-runs the 8 26m configs on the customer path and at least half survive under your rule.",
+     "tier": 0
+    }
+   ],
+   "model": "Llama-3.1-8B",
+   "params": "8B",
+   "band": "M"
+  },
+  {
+   "key": "loop-evolve",
+   "title": "Research loop self-improvement (META)",
+   "persona": "logic",
+   "owns": "how the agents + hermes measurably get better each cycle",
+   "grounding_lane": "compute",
+   "seed_nodes": [
+    {
+     "id": "le-v3-1",
+     "proven": "Every post is now graded by an automatic curator. Of the last 150 posts on the research board: 48 were killed for proposing known-dead ideas, 46 were graded, 0 were worth engine's time, 3 were 'maybe'. Observed failure modes: citing documents that do not exist ('v2.3 docs'), testing on EUR/USD, assuming bot rules that are not true ('fixed 1% position size'), ATR-scaled sizing, neural-net stops.",
+     "frontier": "Audit the research loop itself. Propose ONE concrete change to how candidates are generated or verified (a prompt rule, a verification question, a required field) that would have stopped the failure modes above WITHOUT stopping a real candidate. PASS: state which of the observed failures it blocks and show it would not block a candidate that follows the output contract.",
+     "tier": 0
+    }
+   ],
+   "model": "DeepSeek-R1-Distill-Qwen-7B",
+   "params": "7B",
+   "band": "M"
+  }
+ ],
+ "frontier_note": "v3.0.0 (2026-09-23): every branch now owns ONE question engine is blocked on, with measured facts as the floor and a PASS number defined up front. The v2.2.0 frontiers were generic and stale.",
+ "rating": {
+  "scheme": "difficulty 1-10 (mirrors ~/agent_protocol/enqueue.py). Match task hardness to model size so nobody chews above or below their weight.",
+  "bands": {
+   "S (<=4B)": "1-3 digest / synthesize / simplest checks",
+   "M (7-8B)": "4-6 standard forward candidates",
+   "M+ (9B)": "4-7",
+   "L (>=14B)": "7-10 the hardest verification + statistics"
+  },
+  "rule": "an agent works nodes with difficulty <= its band ceiling; the hardest branch (overfit-proof statistics) goes to the 14B, the phone 4B does S-band digest/curation-lite."
+ },
+ "curator": {
+  "who": "an automatic Jev curator (hourly, since 2026-09-23). The previous hermes curator never ran.",
+  "role": "free dead-class + off-market screen, then Jev grades every [RESEARCH]/[NEXT] post: read_now / maybe / skip. Only read_now reaches engine; a [CURATED] line on the board names what got through.",
+  "why": "connects the two engines: the swarm generates volume, hermes curates quality, engine tests + folds. This is the missing link (Admin 2026-09-15).",
+  "status": "designed; wiring next (hermes on laptop can curate without the phone)."
+ },
+ "roster": {
+  "indicator-next": {
+   "model": "Qwen3-8B",
+   "params": "8B",
+   "band": "M",
+   "d": 6,
+   "runtime": "research_agent.py (runner)"
+  },
+  "overfit-proof": {
+   "model": "Qwen3-14B",
+   "params": "14B",
+   "band": "L",
+   "d": 8,
+   "runtime": "research_agent.py (runner)"
+  },
+  "adaptation": {
+   "model": "gemma-2-9b-it",
+   "params": "9B",
+   "band": "M+",
+   "d": 7,
+   "runtime": "research_agent.py (runner)"
+  },
+  "method-scout": {
+   "model": "Llama-3.1-8B",
+   "params": "8B",
+   "band": "M",
+   "d": 5,
+   "runtime": "research_agent.py (runner)"
+  },
+  "loop-evolve": {
+   "model": "DeepSeek-R1-Distill-Qwen-7B",
+   "params": "7B",
+   "band": "M",
+   "d": 7,
+   "runtime": "research_agent.py (runner)"
+  }
+ }
 }

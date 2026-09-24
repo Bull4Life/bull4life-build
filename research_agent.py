@@ -22,7 +22,7 @@ Env (from the workflow):
   WINDOW_SEC                - seconds to run, default 19800 (5.5h)
   MAX_DEPTH                 - iterations on one thread before ADVANCE, default 4
 """
-import os, sys, json, time, urllib.request, urllib.parse, random
+import os, sys, json, time, urllib.request, urllib.parse, urllib.error, random
 
 TREE_URL  = os.environ.get("TREE_URL", "").rstrip("/")  # improvement_tree.json (public build repo)
 SCORE_URL = os.environ.get("SCORE_URL", "").rstrip("/")  # scorecard.json (engine's feedback + hit-rates)
@@ -141,6 +141,73 @@ SYS = (f"You are {AGENT}, a research agent in the Bull4Life trading fleet, on th
        "honest; if a candidate is weak or just a restatement, SAY SO and drop it. Never fabricate. "
        f"Output contract: {OUTPUT_CONTRACT}{SCORE_LINE}")
 
+# __B4L_LIT_GROUNDING__ (engine 2026-09-24, admin: "send the research fleet where the real info is -> less junk").
+# Measured: 150 board posts -> 0 worth reading; the agents invented documents and facts because they had nothing real
+# to stand on. Now every study first RETRIEVES real papers (arXiv + OpenAlex, free, no key) for one of the branch's
+# curated research_queries, and the model must build on and cite ONLY those - by URL, which the Jev curator re-checks.
+LIT_Q_IDX = [0]
+
+def _get(url, timeout=20, _retry=True):
+    # arXiv answers 406 to urllib's default 'Accept-Encoding: identity' (measured 2026-09-24); ask for gzip.
+    req = urllib.request.Request(url, headers={"User-Agent": "b4l-research/1.0 (engine@bull4life.com)",
+                                               "Accept-Encoding": "gzip"})
+    try:
+        r = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        if _retry and e.code in (406, 429, 503):      # both APIs rate-limit bursts; one polite retry
+            time.sleep(8)
+            return _get(url, timeout, _retry=False)
+        raise
+    with r:
+        raw = r.read()
+        if r.headers.get("Content-Encoding", "") == "gzip":
+            import gzip
+            raw = gzip.decompress(raw)
+        return raw.decode("utf-8", "replace")
+
+def literature(query, n=4):
+    """Up to 2n REAL papers for query: [{title, url, year, abstract}]. Fails soft to []."""
+    out = []
+    try:   # arXiv (Atom)
+        import xml.etree.ElementTree as ET
+        x = _get("https://export.arxiv.org/api/query?search_query=all:" + urllib.parse.quote(query)
+                 + f"&max_results={n}&sortBy=relevance")
+        ns = {"a": "http://www.w3.org/2005/Atom"}
+        for e in ET.fromstring(x).findall("a:entry", ns):
+            t = " ".join((e.findtext("a:title", "", ns) or "").split())
+            u = (e.findtext("a:id", "", ns) or "").strip()
+            if t and u:
+                out.append({"title": t, "url": u, "year": (e.findtext("a:published", "", ns) or "")[:4],
+                            "abstract": " ".join((e.findtext("a:summary", "", ns) or "").split())[:420]})
+    except Exception as ex:
+        log("arxiv skip:", str(ex)[:80])
+    try:   # OpenAlex (the abstract arrives as an inverted index)
+        d = json.loads(_get("https://api.openalex.org/works?search=" + urllib.parse.quote(query)
+                            + f"&per-page={n}&filter=has_abstract:true&mailto=engine@bull4life.com"))
+        for w in d.get("results", []):
+            inv = w.get("abstract_inverted_index") or {}
+            words = sorted((i, k) for k, v in inv.items() for i in v)
+            url = w.get("doi") or w.get("id")
+            if w.get("display_name") and url:
+                out.append({"title": w["display_name"], "url": url, "year": str(w.get("publication_year") or ""),
+                            "abstract": " ".join(k for _, k in words)[:420]})
+    except Exception as ex:
+        log("openalex skip:", str(ex)[:80])
+    return out[: 2 * n]
+
+def grounding():
+    """Papers for the next curated research query of this branch (rotates), formatted for the prompt."""
+    qs = (BR["b"].get("research_queries") if BR else None) or []
+    if not qs:
+        return "", []
+    q = qs[LIT_Q_IDX[0] % len(qs)]; LIT_Q_IDX[0] += 1
+    papers = literature(q)
+    if not papers:
+        return "", []
+    txt = f"REAL PAPERS retrieved just now for '{q}' (the ONLY sources you may use or cite):\n" + "\n".join(
+        f"[{i+1}] {p['title']} ({p['year']}) {p['url']}\n    {p['abstract']}" for i, p in enumerate(papers))
+    return txt, papers
+
 def study(node, guidance=""):
     """node = a branch seed/frontier dict {proven, frontier} OR a plain question string for advanced threads.
     guidance = recent [ENGINE-FEEDBACK] the agent should steer by (learn what engine values)."""
@@ -153,6 +220,11 @@ def study(node, guidance=""):
     if guidance:
         head += (f"\n\nENGINE'S RECENT FEEDBACK TO YOU (steer by this -- do more of what engine QUEUED/FOLDED, "
                  f"avoid what it REJECTED):\n{guidance[:600]}")
+    lit, papers = grounding()
+    if lit:
+        head += ("\n\n" + lit + "\n\nBUILD ON THESE PAPERS. Translate one paper's actual method or equation into our "
+                 "market (crypto perps, WaveTrend counter ladder, 1/3/6/9/26m bars). Cite it as SOURCE: [n] <url>. "
+                 "Never cite anything that is not in this list; never invent a document, a result or a bot rule.")
     draft = ask(SYS, f"{head}\n\nGive your best FORWARD candidate in <=170 words: the new hypothesis/method "
                      "(not the proven floor restated), the mechanism, and one concrete TEST engine can run on "
                      "real data/backtests with an expected result.")
@@ -162,7 +234,9 @@ def study(node, guidance=""):
     final = ask(SYS, f"{head}\nCandidate: {draft}\nCritique: {crit}\n\nIf the critique said DROP, reply exactly "
                      "'DROP: <one line why>'. Otherwise give the REFINED [FOR-ENGINE] candidate in <=170 words as: "
                      "FLOOR: <proven basis> / HYPOTHESIS: <the new thing> / TEST: <engine-runnable check + expected "
-                     "result> / ADVANCES: <which version and how>. End with 'CONFIDENCE: low|medium|high'.")
+                     "result> / ADVANCES: <which version and how>"
+                     + (" / SOURCE: [n] <the exact url from the list>" if lit else "")
+                     + ". End with 'CONFIDENCE: low|medium|high'.")
     conf = "low"
     for c in ("high", "medium", "low"):
         if f"confidence: {c}" in final.lower(): conf = c; break

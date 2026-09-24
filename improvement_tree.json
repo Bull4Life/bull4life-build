@@ -1,6 +1,6 @@
 {
- "version": "3.0.0",
- "updated": "2026-09-23",
+ "version": "3.1.0",
+ "updated": "2026-09-24",
  "owner": "engine",
  "mission": "Engine is your lead. Work ONLY on the open question your branch owns - these are the questions engine is blocked on RIGHT NOW. A candidate is worth something only if engine can run it on the fleet this week and the result would change a decision. SYSTEM FACTS - use these, NEVER invent others (no 'v2.3 docs', no made-up bot rules): we trade CRYPTO PERPETUALS on Bybit - ADA, DOGE, ENA, NEAR, XRP - on 1m/3m/6m/9m/26m bars. Strategies: (1) WaveTrend COUNTER ladder (limit-order rungs that accumulate against the move, tiered adds, consolidation orders, rebuys; a GA hunts its parameters on a donated compute grid); (2) liquidity SWEEP; (3) HLEV, a rare high-leverage golden-gate scalp. Accounts follow the PUBLIC roadmap ladder: tier 0 = $250 trading + $250 safety, orders grow x1.25 per tier while capital grows x1.5-1.67, promote-only. Every test runs on OUR OHLCV candles and OUR backtest engine. Forex, stocks, indices and on-chain data are out of scope.",
  "output_contract": "[FOR-ENGINE] candidate, <=170 words, EXACTLY these lines: TARGET: which asset/timeframe cells. CHANGE: the one thing to vary (a parameter family, a gate rule, a sizing rule) and its range. METRIC: what engine measures (survives from tier 0 Y/N, final equity, replay max drawdown, liquidations; for HLEV: mean return per trade, stop rate, trades per week). PASS: the number that counts as a win, stated BEFORE the test. WHY: the mechanism in one sentence. A candidate without a PASS number, tested on another market, or built on a fact not in SYSTEM FACTS, is dropped.",
@@ -54,7 +54,17 @@
    ],
    "model": "Qwen3-8B",
    "params": "8B",
-   "band": "M"
+   "band": "M",
+   "research_queries": [
+    "turbulent cascade financial markets multiscale",
+    "Kuramoto synchronization financial markets",
+    "Hilbert Huang transform instantaneous amplitude financial",
+    "damped driven oscillator price dynamics",
+    "wavelet coherence cross-scale phase financial",
+    "Hawkes process liquidation cascade cryptocurrency",
+    "Lotka Volterra predator prey market dynamics",
+    "critical slowing down early warning financial crash"
+   ]
   },
   {
    "key": "overfit-proof",
@@ -72,7 +82,13 @@
    ],
    "model": "Qwen3-14B",
    "params": "14B",
-   "band": "L"
+   "band": "L",
+   "research_queries": [
+    "gambler ruin martingale averaging down strategy",
+    "Kelly criterion drawdown constraint",
+    "ruin probability insurance Cramer Lundberg trading",
+    "risk of ruin position sizing leverage"
+   ]
   },
   {
    "key": "adaptation",
@@ -90,7 +106,13 @@
    ],
    "model": "gemma-2-9b-it",
    "params": "9B",
-   "band": "M+"
+   "band": "M+",
+   "research_queries": [
+    "variance ratio test cryptocurrency mean reversion",
+    "Hurst exponent cryptocurrency persistence",
+    "Ornstein Uhlenbeck half-life estimation trading",
+    "multifractal detrended fluctuation analysis cryptocurrency"
+   ]
   },
   {
    "key": "method-scout",
@@ -108,7 +130,13 @@
    ],
    "model": "Llama-3.1-8B",
    "params": "8B",
-   "band": "M"
+   "band": "M",
+   "research_queries": [
+    "Avellaneda Stoikov inventory risk market making",
+    "optimal market making inventory constraints",
+    "adverse selection market maker order flow toxicity",
+    "grid trading strategy mean reversion analysis"
+   ]
   },
   {
    "key": "loop-evolve",
@@ -126,10 +154,15 @@
    ],
    "model": "DeepSeek-R1-Distill-Qwen-7B",
    "params": "7B",
-   "band": "M"
+   "band": "M",
+   "research_queries": [
+    "retrieval augmented generation citation hallucination",
+    "automated scientific discovery language model verification",
+    "LLM agents research reproducibility"
+   ]
   }
  ],
- "frontier_note": "v3.0.0 (2026-09-23): every branch now owns ONE question engine is blocked on, with measured facts as the floor and a PASS number defined up front. The v2.2.0 frontiers were generic and stale.",
+ "frontier_note": "v3.1.0 (2026-09-24): every study now starts from REAL papers retrieved live from arXiv and OpenAlex for the branch's research_queries, and must cite only those (by URL; the Jev curator checks every URL). The indicator-next branch now carries the nature-physics fronts: turbulent cascades across timescales, Kuramoto phase synchronization, Hilbert-Huang wave modes, damped driven oscillators, wavelet cross-scale coherence, Hawkes cascades, predator-prey and early-warning signals. v3.0.0 (2026-09-23): every branch now owns ONE question engine is blocked on, with measured facts as the floor and a PASS number defined up front. The v2.2.0 frontiers were generic and stale.",
  "rating": {
   "scheme": "difficulty 1-10 (mirrors ~/agent_protocol/enqueue.py). Match task hardness to model size so nobody chews above or below their weight.",
   "bands": {

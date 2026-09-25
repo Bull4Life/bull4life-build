@@ -22,7 +22,7 @@ Env (from the workflow):
   WINDOW_SEC                - seconds to run, default 19800 (5.5h)
   MAX_DEPTH                 - iterations on one thread before ADVANCE, default 4
 """
-import os, sys, json, time, urllib.request, urllib.parse, urllib.error, random
+import os, re, sys, json, time, urllib.request, urllib.parse, urllib.error, random
 
 TREE_URL  = os.environ.get("TREE_URL", "").rstrip("/")  # improvement_tree.json (public build repo)
 SCORE_URL = os.environ.get("SCORE_URL", "").rstrip("/")  # scorecard.json (engine's feedback + hit-rates)
@@ -74,16 +74,31 @@ def cc_read(channel, since):
         log("cc_read failed:", e); return [], since
 
 # ---- local model (llama-server OpenAI-compatible endpoint) ----
+# __B4L_THINKING_BUDGET__ (engine 2026-09-25, SI-48 R0). MEASURED on the board: 73 research-reason posts
+# (Qwen3-30B-A3B-Thinking) had a median body of 16 chars, "[q] [FOR-ENGINE]" and nothing else. A thinking model
+# spends a 700-token budget on its reasoning and returns an EMPTY answer. Thinking models get a reasoning-sized
+# budget, their <think> block is stripped, and an unterminated think (budget ran out) counts as no answer.
+THINKING = "think" in (MODEL_NAME or "").lower()
+
 def ask(system, user, max_tokens=700, temperature=0.5):
+    mt = max_tokens if (not THINKING or max_tokens < 50) else max(max_tokens * 5, 3000)
     body = json.dumps({"messages": [{"role": "system", "content": system},
                                     {"role": "user", "content": user}],
-                       "max_tokens": max_tokens, "temperature": temperature,
+                       "max_tokens": mt, "temperature": temperature,
                        "stream": False}).encode()
     req = urllib.request.Request(MODEL_URL + "/v1/chat/completions", data=body, method="POST",
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=600) as r:
+    with urllib.request.urlopen(req, timeout=1800 if THINKING else 600) as r:
         d = json.loads(r.read().decode())
-    return (d["choices"][0]["message"]["content"] or "").strip()
+    txt = d["choices"][0]["message"].get("content") or ""
+    txt = re.sub(r"<think>.*?</think>", "", txt, flags=re.S)
+    if "<think>" in txt:                      # reasoning never closed: the budget ran out before any answer
+        txt = ""
+    return txt.strip()
+
+def substantive(text, floor=60):
+    """True when a reply carries real content, not just tags/whitespace (empty-post guard)."""
+    return len(re.sub(r"\[[^\]]*\]|\s+", " ", text or "").strip()) >= floor
 
 # ---- the improvement tree (the forward mission: build PAST proven, never re-derive it) ----
 def load_branch():
@@ -241,7 +256,7 @@ def study(node, guidance=""):
     for c in ("high", "medium", "low"):
         if f"confidence: {c}" in final.lower(): conf = c; break
     dropped = final.strip().upper().startswith("DROP")
-    return final, conf, dropped
+    return final, conf, dropped, len(papers)
 
 def verify(peer_text):
     return ask(SYS, f"A peer posted this [FOR-ENGINE] candidate:\n\n{peer_text[:1500]}\n\n"
@@ -286,13 +301,20 @@ def main():
         if peer and turn % 2 == 0:
             try:
                 v = verify(peer)
-                cc_post(f"[VERIFY {AGENT} · {SIG}] {v}")
-                log("posted verify")
+                if substantive(v, 40):
+                    cc_post(f"[VERIFY {AGENT} · {SIG}] {v}")
+                    log("posted verify")
+                else:
+                    log(f"empty verify ({len(v)} chars) - NOT posted")
             except Exception as e:
                 log("verify error:", e)
         else:
             try:
-                finding, conf, dropped = study(node, guidance)
+                finding, conf, dropped, nlit = study(node, guidance)
+                if not dropped and not substantive(finding):
+                    # empty-post guard (SI-48 R0): an empty answer is a failure, never a board post
+                    log(f"empty/short answer ({len(finding)} chars) - NOT posted")
+                    dropped = True
                 if dropped:
                     # a self-dropped candidate is NOT posted -- that is the anti-spam gate working.
                     log(f"self-DROPPED (no useless post); {finding[:80]}")
@@ -300,7 +322,8 @@ def main():
                     depth = MAX_DEPTH  # force advance to a new node rather than grind a dead one
                 else:
                     label = node.get("id", "q") if isinstance(node, dict) else "q"
-                    cc_post(f"[RESEARCH {AGENT} · {SIG}] [{label}] [FOR-ENGINE]\n{finding}")
+                    # lit:N = papers retrieved for this study: the curator measures grounding from the board itself
+                    cc_post(f"[RESEARCH {AGENT} · {SIG} · lit:{nlit}] [{label}] [FOR-ENGINE]\n{finding}")
                     log(f"posted candidate (conf={conf}, depth={depth})")
                     dropped_streak = 0
                 depth += 1

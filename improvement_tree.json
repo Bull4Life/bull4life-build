@@ -1,5 +1,5 @@
 {
- "version": "3.2.0",
+ "version": "3.3.0",
  "updated": "2026-09-25",
  "owner": "engine",
  "mission": "Engine is your lead. Work ONLY on the open question your branch owns - these are the questions engine is blocked on RIGHT NOW. A candidate is worth something only if engine can run it on the fleet this week and the result would change a decision. SYSTEM FACTS - use these, NEVER invent others (no 'v2.3 docs', no made-up bot rules): we trade CRYPTO PERPETUALS on Bybit - ADA, DOGE, ENA, NEAR, XRP - on 1m/3m/6m/9m/26m bars. Strategies: (1) WaveTrend COUNTER ladder (limit-order rungs that accumulate against the move, tiered adds, consolidation orders, rebuys; a GA hunts its parameters on a donated compute grid); (2) liquidity SWEEP; (3) HLEV, a rare high-leverage golden-gate scalp. Accounts follow the PUBLIC roadmap ladder: tier 0 = $250 trading + $250 safety, orders grow x1.25 per tier while capital grows x1.5-1.67, promote-only. Every test runs on OUR OHLCV candles and OUR backtest engine. Forex, stocks, indices and on-chain data are out of scope.",
@@ -98,9 +98,9 @@
    "grounding_lane": "strategy",
    "seed_nodes": [
     {
-     "id": "ad-v3-1",
-     "proven": "Under the roadmap order rule, from a tier-0 start: XRP survives 6 of 6 configs, DOGE 4/8, ADA 3/8, NEAR 3/8, ENA 0 of 8. At tier 4 ENA still loses 5 of 8. The rule is identical for every asset (lot x timeframe x 1.25^tier), so the difference is in the ASSET's price behaviour or in how its configs were tuned. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
-     "frontier": "Name ONE measurable property of an asset's OHLCV bars (e.g. how far price travels past a rung before reverting, how often bars gap across several rungs, how long one-directional runs last - pick one and define it exactly) that is HIGH for ENA and LOW for XRP, and explain why it kills a counter ladder whose orders just got larger. PASS: the property ranks the five assets in the same order as their survival.",
+     "id": "ad-v33-1",
+     "proven": "MEASURED 2026-09-25 (SI-48). The live fund is ONE shared cross-margin pool (about $3.9k) behind 32 machines: 16 WaveTrend counter ladders and 16 sweeps, each sized in fixed USD per order. A replay of that pool from 6 start dates showed that WHICH machines run together decides survival. (1) Six machines a plan wanted to retire were HEDGING the rest: they gained $9.3k while the others lost, and removing them wiped the pool out. (2) The 26-minute ladders (DOGE, ADA, ENA) drive every bad window. (3) A book chosen for its pooled worst low on 2023-24 data survived 2025-26 (worst low +$632), where the live book was wiped out (-$4,490). That put it at the 91st percentile of 2,000 random books, against the live book's 4th. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Propose ONE portfolio-construction rule from the literature that picks 16 of 38 counter-ladder machines for a shared pool, for example: clustering by drawdown correlation, CDaR- or CVaR-constrained selection, hierarchical risk parity on drawdown paths, or a joint-loss stress test. Define it exactly. Say how to test it walk-forward: choose on 2023-06..2024-12, judge on 2025-01..2026-09, against greedy worst-low selection and 2,000 random books. PASS: a better out-of-sample worst low at >= 0.9x the median final equity.",
      "tier": 0
     }
    ],
@@ -108,10 +108,10 @@
    "params": "9B",
    "band": "M+",
    "research_queries": [
-    "variance ratio test cryptocurrency mean reversion",
-    "Hurst exponent cryptocurrency persistence",
-    "Ornstein Uhlenbeck half-life estimation trading",
-    "multifractal detrended fluctuation analysis cryptocurrency"
+    "conditional drawdown at risk portfolio optimization",
+    "hierarchical risk parity",
+    "drawdown correlation clustering portfolio",
+    "CVaR portfolio selection cardinality constraint"
    ]
   },
   {
@@ -122,9 +122,9 @@
    "grounding_lane": "compute",
    "seed_nodes": [
     {
-     "id": "ms-v3-1",
-     "proven": "26-minute bars: 0 of 8 WaveTrend configs survive a tier-0 start under the roadmap rule, although several survive at tier 4. At tier 0 a 26m order is 26 lots, about 1-2% of the account per order; capital grows faster than orders per tier, so tier 0 is the riskiest point. 1m is already gated until tier 6 for a related reason (1 lot x 1.25 rounds back to 1 lot). DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
-     "frontier": "Propose the rule for LONG timeframes: either a smaller tier-0 base for 26m (give the formula), or the lowest tier 26m should unlock at (like 1m unlocks at tier 6), with the arithmetic that justifies it. PASS: engine re-runs the 8 26m configs on the customer path and at least half survive under your rule.",
+     "id": "ms-v33-1",
+     "proven": "MEASURED 2026-09-25 (SI-48). A ruin-probability alarm for a counter ladder is a two-barrier first-passage model: liquidation versus the take-profit or a regime flip, with the flip rate pooled at 1/850 bars. It warned 9 of 10 early deaths at least 6 h ahead (median 56 h), with zero false alarms on 12 robust survivors. But REFUSING new adds once the alarm fires rescued 0 of 65 deaths on a fresh 102-row panel: the inventory already held kills. Refusing earlier (an annual ruin budget) rescued 5 of 22 but halved the survivors' growth. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
+     "frontier": "Find ONE published method that lowers the ruin risk of inventory ALREADY HELD, without a stop and without volatility-scaled sizing. Examples: pairing a ladder with a naturally opposite ladder in the same pool (a cross-hedge), moving the take-profit toward the average for a faster exit, or pausing only the rebuy loop. Define it exactly, and name the paired test on our fleet: alarm-triggered versus control, on a fresh panel, with a growth guard. PASS: rescues beyond the chaos rate (5% per death), with survivors at >= 0.9x.",
      "tier": 0
     }
    ],
@@ -132,10 +132,10 @@
    "params": "8B",
    "band": "M",
    "research_queries": [
-    "Avellaneda Stoikov inventory risk market making",
-    "optimal market making inventory constraints",
-    "adverse selection market maker order flow toxicity",
-    "grid trading strategy mean reversion analysis"
+    "optimal liquidation ruin probability constraint",
+    "market maker inventory risk hedging",
+    "first passage time two barriers inventory",
+    "take profit placement mean reversion first passage"
    ]
   },
   {
@@ -162,7 +162,7 @@
    ]
   }
  ],
- "frontier_note": "v3.1.0 (2026-09-24): every study now starts from REAL papers retrieved live from arXiv and OpenAlex for the branch's research_queries, and must cite only those (by URL; the Jev curator checks every URL). The indicator-next branch now carries the nature-physics fronts: turbulent cascades across timescales, Kuramoto phase synchronization, Hilbert-Huang wave modes, damped driven oscillators, wavelet cross-scale coherence, Hawkes cascades, predator-prey and early-warning signals. v3.0.0 (2026-09-23): every branch now owns ONE question engine is blocked on, with measured facts as the floor and a PASS number defined up front. The v2.2.0 frontiers were generic and stale.",
+ "frontier_note": "v3.3.0 (2026-09-25): adaptation moves to POOLED-BOOK survival (the live fund survives or dies by which machines share the pool; SI-48 test #8 PASS). method-scout moves to lowering the ruin of HELD inventory after the alarm fires (refusing adds is closed: 0 of 65 rescued). v3.1.0 (2026-09-24): every study now starts from REAL papers retrieved live from arXiv and OpenAlex for the branch's research_queries, and must cite only those (by URL; the Jev curator checks every URL). The indicator-next branch now carries the nature-physics fronts: turbulent cascades across timescales, Kuramoto phase synchronization, Hilbert-Huang wave modes, damped driven oscillators, wavelet cross-scale coherence, Hawkes cascades, predator-prey and early-warning signals. v3.0.0 (2026-09-23): every branch now owns ONE question engine is blocked on, with measured facts as the floor and a PASS number defined up front. The v2.2.0 frontiers were generic and stale.",
  "rating": {
   "scheme": "difficulty 1-10 (mirrors ~/agent_protocol/enqueue.py). Match task hardness to model size so nobody chews above or below their weight.",
   "bands": {

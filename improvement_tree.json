@@ -1,6 +1,6 @@
 {
- "version": "3.1.0",
- "updated": "2026-09-24",
+ "version": "3.2.0",
+ "updated": "2026-09-25",
  "owner": "engine",
  "mission": "Engine is your lead. Work ONLY on the open question your branch owns - these are the questions engine is blocked on RIGHT NOW. A candidate is worth something only if engine can run it on the fleet this week and the result would change a decision. SYSTEM FACTS - use these, NEVER invent others (no 'v2.3 docs', no made-up bot rules): we trade CRYPTO PERPETUALS on Bybit - ADA, DOGE, ENA, NEAR, XRP - on 1m/3m/6m/9m/26m bars. Strategies: (1) WaveTrend COUNTER ladder (limit-order rungs that accumulate against the move, tiered adds, consolidation orders, rebuys; a GA hunts its parameters on a donated compute grid); (2) liquidity SWEEP; (3) HLEV, a rare high-leverage golden-gate scalp. Accounts follow the PUBLIC roadmap ladder: tier 0 = $250 trading + $250 safety, orders grow x1.25 per tier while capital grows x1.5-1.67, promote-only. Every test runs on OUR OHLCV candles and OUR backtest engine. Forex, stocks, indices and on-chain data are out of scope.",
  "output_contract": "[FOR-ENGINE] candidate, <=170 words, EXACTLY these lines: TARGET: which asset/timeframe cells. CHANGE: the one thing to vary (a parameter family, a gate rule, a sizing rule) and its range. METRIC: what engine measures (survives from tier 0 Y/N, final equity, replay max drawdown, liquidations; for HLEV: mean return per trade, stop rate, trades per week). PASS: the number that counts as a win, stated BEFORE the test. WHY: the mechanism in one sentence. A candidate without a PASS number, tested on another market, or built on a fact not in SYSTEM FACTS, is dropped.",
@@ -46,24 +46,23 @@
    "grounding_lane": "indicator",
    "seed_nodes": [
     {
-     "id": "in-v3-1",
-     "proven": "HLEV's entry gate (a rare extreme of the fan indicator: top tier, falling forecast, sp3 rank in the bottom 0.5% of a 2000-bar window) was tested on every timeframe: it WORKS on 3m (all 5 assets, 0 liquidations) and 1m (ENA, ADA, NEAR); on 6m it fires but no setting passes; on 9m it barely or never fires; on 26m it NEVER fires. The window and percentile are fixed in BARS, not in time. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
-     "frontier": "Propose how the gate's rank window and percentile should SCALE with timeframe so it fires on 6m/9m/26m at a frequency comparable to 3m, and why the fired events would still be exhaustion rather than cascades. Give the exact scaling rule. PASS: on 6m and 9m it produces at least 15 resolved trades per asset with a positive mean return per trade and zero liquidations.",
-     "tier": 0
+     "id": "in-v32-1",
+     "proven": "The fan indicator's three lines are rolling DENSITIES of three WaveTrend booleans (sp = share of the last 748 bars where histo > wt1; sp2: histo > wt2; sp3: wt1 > wt2). Their next moves are 96-98% fixed by the bits leaving the 748-bar window (arithmetic, not a price forecast). Today the product draws only the three lines; the indicator also computes fan-bottom/top zones, a volume-climax flag, five timeframes, projection tiers and ladder state that no chart shows.",
+     "frontier": "Propose ONE visual encoding, grounded in a cited paper on graphical perception or visualization, that would let a trader answer 'which way is each timeframe leaning, how stretched, is a flip near, are the timeframes aligned' FASTER than three lines. State which perceptual channel it uses (position, length, colour, area) and ONE test engine can run: the same real bars drawn both ways, judged on those questions."
     }
    ],
    "model": "Qwen3-8B",
    "params": "8B",
    "band": "M",
    "research_queries": [
-    "turbulent cascade financial markets multiscale",
-    "Kuramoto synchronization financial markets",
-    "Hilbert Huang transform instantaneous amplitude financial",
-    "damped driven oscillator price dynamics",
-    "wavelet coherence cross-scale phase financial",
-    "Hawkes process liquidation cascade cryptocurrency",
-    "Lotka Volterra predator prey market dynamics",
-    "critical slowing down early warning financial crash"
+    "graphical perception time series visualization",
+    "horizon graph time series perception",
+    "visualization binary event sequences raster",
+    "phase portrait visualization financial time series",
+    "first passage time jump diffusion leverage liquidation",
+    "positive feedback averaging down position size growth",
+    "fan chart uncertainty visualization forecast",
+    "small multiples comparison visualization design"
    ]
   },
   {
@@ -74,20 +73,21 @@
    "grounding_lane": "hunter",
    "seed_nodes": [
     {
-     "id": "op-v3-1",
-     "proven": "Engine re-tested 38 WaveTrend configs under the roadmap order-size rule. Their OLD ranking barely predicts the new one (rank correlation 0.154; only 3 of the old top-10 stay top-10). OLD max drawdown does NOT protect: the config with the lowest old drawdown (15%) liquidated. 16 of 38 survive a customer's path from tier 0; 31 of 38 survive at tier 4. DEAD - auto-REJECT (measured on real money): RSI/EMA/MACD/Bollinger/stochastic/Ichimoku; ATR or ANY volatility-scaled sizing, stops or filters; trailing stops; LSTM/GNN/transformer/RL/sentiment models; 'dynamic lookback/threshold'; re-weighting existing signals by confidence. Proposing any of these = REJECTED.",
-     "frontier": "Propose ONE statistic engine can compute from a config's EXISTING backtest (equity curve, fills, position path - at the OLD small order size) that predicts whether it SURVIVES a tier-0 start at 3-26x larger orders. Say exactly how to compute it and the threshold. PASS: it separates the 16 survivors from the 22 dead better than old max drawdown does (which fails).",
-     "tier": 0
+     "id": "op-v32-1",
+     "proven": "MEASURED 2026-09-25: one live WaveTrend ladder config (ADA 6m) survives a $250+$250 start on Windows (final $37,080, 667,824 trades) and LIQUIDATES on Linux at bar 178,325 on the same code and the same 285,360 bars; four engine versions are byte-identical on Linux. A second config (pbtc 9m) did the same on 2026-09-19. 37 of 38 live configs agree across the two machines. A compounding counter-ladder can be a knife edge: tiny numerical differences flip survival.",
+     "frontier": "Propose, from a cited paper, a ROBUSTNESS measure that separates knife-edge survival from real margin (e.g. perturbation ensembles, divergence rate of two nearby runs) and the smallest test that proves it on our 38 live configs: what fraction must survive under 12 tiny price nudges to call a config robust, and how many configs are needed to tell 'fragile' from 'robust' at 80% power."
     }
    ],
    "model": "Qwen3-14B",
    "params": "14B",
    "band": "L",
    "research_queries": [
-    "gambler ruin martingale averaging down strategy",
-    "Kelly criterion drawdown constraint",
-    "ruin probability insurance Cramer Lundberg trading",
-    "risk of ruin position sizing leverage"
+    "CUPED variance reduction online controlled experiments",
+    "anytime valid inference e-values sequential testing",
+    "probability of backtest overfitting deflated Sharpe ratio",
+    "floating point nondeterminism reproducibility simulation",
+    "sensitivity to initial conditions path dependent strategy",
+    "ensemble perturbation robustness chaotic system"
    ]
   },
   {
